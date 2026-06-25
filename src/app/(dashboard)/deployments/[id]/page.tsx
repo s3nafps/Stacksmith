@@ -353,7 +353,7 @@ export default function DeploymentDetailPage({ params }: { params: Promise<{ id:
                     Generate Files
                   </Button>
                 )}
-                {deployment.status === 'UPDATE_AVAILABLE' && (
+                {deployment.status === 'UPDATE_AVAILABLE' && false && (
                   <Button onClick={handleUpgrade} loading={actionLoading} className="gap-1.5 bg-gradient-to-r from-amber-500 to-orange-600">
                     <RefreshCw className="w-3.5 h-3.5" />
                     Upgrade Available
@@ -399,7 +399,7 @@ export default function DeploymentDetailPage({ params }: { params: Promise<{ id:
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="bg-[var(--bg-tertiary)] border border-[var(--border-secondary)] p-1 rounded-lg">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            {deployment.status === 'UPDATE_AVAILABLE' && (
+            {deployment.status === 'UPDATE_AVAILABLE' && false && (
               <TabsTrigger value="upgrade">Upgrade Review</TabsTrigger>
             )}
             <TabsTrigger value="files" disabled={deployment.status === 'DRAFT'}>Files Preview</TabsTrigger>
@@ -601,121 +601,10 @@ export default function DeploymentDetailPage({ params }: { params: Promise<{ id:
               </Card>
             </div>
           </TabsContent>
-
-          {/* Upgrade Tab */}
-          {deployment.status === 'UPDATE_AVAILABLE' && upgradeDetails && (
+          {false && (
             <TabsContent value="upgrade" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Upgrade changes overview */}
-                <div className="lg:col-span-2 space-y-6">
-                  <Card className="border-amber-500/20 bg-amber-500/5">
-                    <CardContent className="p-5 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <AlertTriangle className="w-5 h-5 text-amber-500" />
-                        <div>
-                          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Version Upgrade Details</h3>
-                          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                            Upgrading this deployment from v{upgradeDetails.currentVersion} to v{upgradeDetails.targetVersion}.
-                          </p>
-                        </div>
-                      </div>
-
-                      {upgradeDetails.comparison?.changelog && (
-                        <div className="p-3.5 bg-black/40 rounded-lg border border-white/5">
-                          <h4 className="text-xs font-semibold text-[var(--text-primary)] mb-1.5">Changelog:</h4>
-                          <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-mono whitespace-pre-line">
-                            {upgradeDetails.comparison.changelog}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="space-y-3 pt-2">
-                        {upgradeDetails.comparison?.inputsAdded?.length > 0 && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-[var(--success)] flex items-center gap-1.5 mb-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
-                              New variables added:
-                            </h4>
-                            <div className="flex flex-wrap gap-1.5 pl-3">
-                              {upgradeDetails.comparison.inputsAdded.map((input: string) => (
-                                <code key={input} className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
-                                  {input}
-                                </code>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {upgradeDetails.comparison?.inputsRemoved?.length > 0 && (
-                          <div>
-                            <h4 className="text-xs font-semibold text-[var(--error)] flex items-center gap-1.5 mb-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--error)]" />
-                              Variables removed:
-                            </h4>
-                            <div className="flex flex-wrap gap-1.5 pl-3">
-                              {upgradeDetails.comparison.inputsRemoved.map((input: string) => (
-                                <code key={input} className="text-[10px] font-mono bg-red-500/10 text-red-400 px-2 py-0.5 rounded border border-red-500/20">
-                                  {input}
-                                </code>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="pt-4 border-t border-amber-500/10 flex justify-end">
-                        <Button onClick={handleUpgrade} loading={actionLoading} className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5">
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          Apply Upgrade Configuration
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Conflict Status Panel */}
-                <div className="space-y-6">
-                  <Card>
-                    <CardContent className="p-5 space-y-4">
-                      <h3 className="text-sm font-semibold text-[var(--text-primary)]">Conflict Assessment</h3>
-                      {upgradeDetails.conflicts?.length > 0 ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
-                            <AlertTriangle className="w-4 h-4 text-[var(--error)] shrink-0" />
-                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                              Some files have been modified directly in the repository and may conflict with the upgrade.
-                            </p>
-                          </div>
-                          <div className="divide-y divide-[var(--border-secondary)]">
-                            {upgradeDetails.conflicts.map((conflict) => (
-                              <div key={conflict.path} className="py-2.5 space-y-1">
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="font-mono truncate font-medium text-[var(--text-primary)]">
-                                    {conflict.path}
-                                  </span>
-                                  <Badge variant="error" className="capitalize text-[9px] px-1 py-0 scale-90">
-                                    {conflict.type}
-                                  </Badge>
-                                </div>
-                                <p className="text-[10px] text-[var(--text-tertiary)] leading-normal">
-                                  {conflict.message}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-6 text-center">
-                          <CheckCircle2 className="w-8 h-8 text-[var(--success)] mb-2" />
-                          <h4 className="text-xs font-semibold text-[var(--text-primary)]">No conflicts detected</h4>
-                          <p className="text-[10px] text-[var(--text-secondary)] max-w-[200px] mt-0.5 leading-relaxed">
-                            No manual alterations found in the Git repository. Safe to execute automated upgrade.
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
+              <div className="p-5 text-center text-sm text-[var(--text-secondary)]">
+                Upgrades are currently disabled.
               </div>
             </TabsContent>
           )}

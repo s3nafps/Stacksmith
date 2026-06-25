@@ -37,7 +37,8 @@ export async function checkForUpgrade(
 
   const result = await checkForUpdates(
     deployment.blueprint.slug,
-    deployment.blueprintVersion.version
+    deployment.blueprintVersion.version,
+    deployment.workspaceId
   );
 
   if (result.available) {
@@ -83,7 +84,8 @@ export async function getUpgradeDetails(
 
   const updateCheck = await checkForUpdates(
     deployment.blueprint.slug,
-    deployment.blueprintVersion.version
+    deployment.blueprintVersion.version,
+    deployment.workspaceId
   );
 
   if (!updateCheck.available) {
@@ -93,7 +95,8 @@ export async function getUpgradeDetails(
   const comparison = await compareVersions(
     deployment.blueprint.slug,
     deployment.blueprintVersion.version,
-    updateCheck.latestVersion
+    updateCheck.latestVersion,
+    deployment.workspaceId
   );
 
   // Detect conflicts by checking current repo files against manifest
@@ -123,80 +126,7 @@ export async function startUpgrade(
     throw new NotFoundError('Deployment', deploymentId);
   }
 
-  const updateCheck = await checkForUpdates(
-    deployment.blueprint.slug,
-    deployment.blueprintVersion.version
-  );
-
-  if (!updateCheck.available) {
-    throw new AppError('No upgrade available', 400, 'NO_UPGRADE');
-  }
-
-  await prisma.activityEvent.create({
-    data: {
-      deploymentId,
-      type: 'UPGRADE_STARTED',
-      title: 'Upgrade started',
-      description: `Upgrading from ${deployment.blueprintVersion.version} to ${updateCheck.latestVersion}`,
-    },
-  });
-
-  // Find the new version record
-  const newVersion = await prisma.blueprintVersion.findFirst({
-    where: {
-      blueprintId: deployment.blueprintId,
-      version: updateCheck.latestVersion,
-    },
-  });
-
-  if (!newVersion) {
-    throw new NotFoundError(
-      'BlueprintVersion',
-      `${deployment.blueprint.slug}@${updateCheck.latestVersion}`
-    );
-  }
-
-  // Update deployment to point to new version
-  await prisma.deployment.update({
-    where: { id: deploymentId },
-    data: {
-      blueprintVersionId: newVersion.id,
-      status: 'DRAFT',
-    },
-  });
-
-  // Re-generate with new version
-  const inputsMap: Record<string, { value: string | number | boolean; sensitive: boolean }> = {};
-  for (const inp of deployment.inputs) {
-    inputsMap[inp.key] = {
-      value: inp.isSensitive ? decrypt(inp.value) : inp.value,
-      sensitive: inp.isSensitive,
-    };
-  }
-
-  await generate({
-    blueprintSlug: deployment.blueprint.slug,
-    blueprintVersion: updateCheck.latestVersion,
-    deploymentId,
-    targetDir: deployment.targetDir,
-    environmentName: deployment.environmentName,
-    inputs: inputsMap,
-    workspaceId: deployment.workspaceId,
-  });
-
-  await prisma.deployment.update({
-    where: { id: deploymentId },
-    data: { status: 'READY' },
-  });
-
-  await prisma.activityEvent.create({
-    data: {
-      deploymentId,
-      type: 'UPGRADE_COMPLETED',
-      title: 'Upgrade completed',
-      description: `Successfully upgraded to ${updateCheck.latestVersion}`,
-    },
-  });
+  throw new AppError('Upgrades are currently disabled', 503, 'UPGRADE_DISABLED');
 }
 
 export async function detectConflicts(
@@ -222,6 +152,7 @@ export async function detectConflicts(
 async function detectConflictsInternal(
   deployment: {
     id: string;
+    workspaceId: string;
     managedFiles: unknown;
     blueprint: { slug: string };
     blueprintVersion: { version: string };
@@ -232,7 +163,7 @@ async function detectConflictsInternal(
       defaultBranch: string;
       installation?: { connection?: { accessToken: string } } | null;
     } | null;
-    inputs: Array<{ key: string; value: string }>;
+    inputs: Array<{ key: string; value: string; isSensitive: boolean }>;
   }
 ): Promise<ConflictEntry[]> {
   // If no managed files manifest, no conflicts to detect

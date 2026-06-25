@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
+import { execSync } from 'child_process';
 import { prisma } from '@/lib/prisma';
 import {
   createDraft,
@@ -24,6 +25,9 @@ describe('Safety Repairs Tests', () => {
   let customBlueprintVersionId: string;
 
   beforeAll(async () => {
+    // Run db push to ensure test database is ready
+    execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+
     // 1. Create clean test user and workspaces
     userId = `test-user-${Date.now()}`;
     workspaceIdA = `ws-a-${Date.now()}`;
@@ -191,6 +195,7 @@ describe('Safety Repairs Tests', () => {
         workspaceId: workspaceIdA,
         targetDir: 'infra',
         environmentName: 'dev',
+        toolPreference: 'terraform',
         inputs: {
           bucket_name: 'test-bucket',
           api_token: 'super-secret-token',
@@ -243,6 +248,7 @@ describe('Safety Repairs Tests', () => {
         workspaceId: workspaceIdA,
         targetDir: 'infra-fail',
         environmentName: 'dev',
+        toolPreference: 'terraform',
         inputs: {
           bucket_name: 'fail-bucket',
           api_token: 'secret-val',
@@ -277,6 +283,7 @@ describe('Safety Repairs Tests', () => {
         workspaceId: workspaceIdA,
         targetDir: 'infra-skip',
         environmentName: 'dev',
+        toolPreference: 'terraform',
         inputs: {
           bucket_name: 'skip-bucket',
           api_token: 'secret-val',
@@ -313,6 +320,7 @@ describe('Safety Repairs Tests', () => {
         workspaceId: workspaceIdA,
         targetDir: 'infra-custom',
         environmentName: 'dev',
+        toolPreference: 'terraform',
         inputs: {
           app_secret: 'user-secret-value',
         },
@@ -397,6 +405,7 @@ describe('Safety Repairs Tests', () => {
         workspaceId: workspaceIdA,
         targetDir: 'infra-preview',
         environmentName: 'dev',
+        toolPreference: 'terraform',
         inputs: {
           bucket_name: 'preview-bucket',
           api_token: 'secret-api-preview-key',
@@ -440,6 +449,7 @@ describe('Safety Repairs Tests', () => {
           workspaceId: workspaceIdB,
           targetDir: 'infra',
           environmentName: 'dev',
+          toolPreference: 'terraform',
           inputs: {
             db_password: 'pass',
           },

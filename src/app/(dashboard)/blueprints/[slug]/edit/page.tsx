@@ -140,14 +140,12 @@ export default function EditBlueprintPage({ params }: PageProps) {
       try {
         setLoading(true);
         setError('');
-        const res = await fetch('/api/blueprints');
-        if (!res.ok) throw new Error('Failed to load blueprints list');
-        const items = await res.json();
-        
-        const bp = items.find((item: any) => item.slug === slug);
-        if (!bp) {
-          throw new Error(`Blueprint ${slug} not found`);
+        const res = await fetch(`/api/blueprints/custom/${slug}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to load blueprint details');
         }
+        const bp = await res.json();
 
         if (bp.ownerId !== session?.user?.id) {
           throw new Error('You do not have permission to edit this blueprint');

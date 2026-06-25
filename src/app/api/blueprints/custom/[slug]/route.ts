@@ -6,8 +6,36 @@ import {
   deleteCustomBlueprint,
   type CustomBlueprintInput,
 } from '@/features/blueprints/custom-blueprint-service';
+import { getBlueprint } from '@/features/blueprints/blueprint-service';
 import { cookies } from 'next/headers';
 import { checkWorkspacePermission } from '@/lib/rbac';
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const cookieStore = await cookies();
+    const workspaceId = cookieStore.get('activeWorkspaceId')?.value;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace ID is required' }, { status: 400 });
+    }
+
+    await checkWorkspacePermission(session.user.id, workspaceId, 'VIEWER');
+
+    const { slug } = await params;
+    const blueprint = await getBlueprint(slug, workspaceId);
+    return NextResponse.json(blueprint);
+  } catch (error: unknown) {
+    return errorJson(error, 'Failed to fetch custom blueprint details');
+  }
+}
+
 
 export async function PATCH(
   request: Request,

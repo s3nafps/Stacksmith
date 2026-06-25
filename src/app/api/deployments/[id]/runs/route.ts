@@ -38,6 +38,13 @@ export async function GET(
     return NextResponse.json({ error: error.message || 'Forbidden' }, { status: 403 });
   }
 
+  if (process.env.MOCK_GITHUB !== 'true') {
+    return NextResponse.json(
+      { error: 'Hosted Terraform execution is disabled' },
+      { status: 403 }
+    );
+  }
+
 
   // Set up Server-Sent Events headers
   const responseHeaders = {
@@ -117,95 +124,9 @@ export async function GET(
           sendEvent(`[FINISHED]`);
           controller.close();
         } else {
-          // --- REAL execution ---
-          sendEvent(`\x1b[36m[InfraPack Runner]\x1b[0m Generating Terraform workspace...`);
-          
-          // Generate actual files in a temp folder
-          const tmpDir = await fs.mkdtemp(
-            path.join(os.tmpdir(), `infrapack-run-${id}-`)
-          );
-
-          try {
-            const inputsMap: Record<string, { value: string | number | boolean; sensitive: boolean }> = {};
-            for (const inp of deployment.inputs) {
-              inputsMap[inp.key] = {
-                value: inp.isSensitive ? decrypt(inp.value) : inp.value,
-                sensitive: inp.isSensitive,
-              };
-            }
-
-            const genResult = await generate({
-              blueprintSlug: deployment.blueprint.slug,
-              blueprintVersion: deployment.blueprintVersion.version,
-              deploymentId: id,
-              targetDir: deployment.targetDir,
-              environmentName: deployment.environmentName,
-              inputs: inputsMap,
-              workspaceId: deployment.workspaceId,
-            });
-
-            // Write files to temp path
-            for (const file of genResult.files) {
-              const filePath = path.join(tmpDir, file.path);
-              await fs.mkdir(path.dirname(filePath), { recursive: true });
-              await fs.writeFile(filePath, file.content, 'utf-8');
-            }
-
-            // Locate tf files
-            const hasTfFiles = genResult.files.some((f) => f.path.endsWith('.tf'));
-            if (!hasTfFiles) {
-              sendEvent(`\x1b[31mError:\x1b[0m No .tf files found in output manifest.`);
-              controller.close();
-              return;
-            }
-
-            // Command configuration
-            let command = '';
-            if (action === 'validate') {
-              command = 'terraform init -backend=false -no-color && terraform validate -no-color';
-            } else if (action === 'plan') {
-              command = 'terraform init -backend=false -no-color && terraform plan -no-color';
-            } else if (action === 'apply') {
-              command = 'terraform init -backend=false -no-color && terraform apply -auto-approve -no-color';
-            }
-
-            sendEvent(`\x1b[32m[Command]\x1b[0m ${command}`);
-
-            const child = exec(command, { cwd: tmpDir });
-            
-            child.stdout?.on('data', (data) => {
-              const lines = String(data).split('\n');
-              for (const line of lines) {
-                if (line.trim()) sendEvent(line);
-              }
-            });
-
-            child.stderr?.on('data', (data) => {
-              const lines = String(data).split('\n');
-              for (const line of lines) {
-                if (line.trim()) sendEvent(`\x1b[31m${line}\x1b[0m`);
-              }
-            });
-
-            child.on('close', (code) => {
-              if (code === 0) {
-                sendEvent(`\x1b[32m[Success]\x1b[0m Run command completed with exit code 0.`);
-              } else {
-                sendEvent(`\x1b[31m[Failure]\x1b[0m Run command failed with exit code ${code}.`);
-              }
-              sendEvent(`[FINISHED]`);
-              controller.close();
-            });
-
-          } catch (err: any) {
-            sendEvent(`\x1b[31mError:\x1b[0m ${err.message || 'Execution error'}`);
-            controller.close();
-          } finally {
-            // Cleanup in background
-            setTimeout(async () => {
-              await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-            }, 5000);
-          }
+          sendEvent(`\x1b[31mError:\x1b[0m Hosted execution is disabled in production.`);
+          sendEvent(`[FINISHED]`);
+          controller.close();
         }
       } catch (err: any) {
         sendEvent(`\x1b[31mError in SSE Stream:\x1b[0m ${err.message}`);
