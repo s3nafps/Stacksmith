@@ -5,8 +5,23 @@ import { encryptToken } from '@/lib/encryption';
 
 import { cookies } from 'next/headers';
 import { checkWorkspacePermission } from '@/lib/rbac';
+import { env, isEnabled } from '@/lib/env';
+import type { Prisma } from '@prisma/client';
 
 export async function POST(request: Request) {
+  if (!isEnabled('MOCK_GITHUB_API')) {
+    return NextResponse.json(
+      { error: 'GitHub App integration is not configured. Demo installations require MOCK_GITHUB_API=true.' },
+      { status: 501 }
+    );
+  }
+  if (env.NODE_ENV === 'production' && !isEnabled('ALLOW_DEMO_PRODUCTION')) {
+    return NextResponse.json(
+      { error: 'Mock GitHub installation creation is disabled in production' },
+      { status: 403 }
+    );
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -46,7 +61,7 @@ export async function POST(request: Request) {
 
     // 2. Create the GitHubInstallation record in the DB
     const installationId = Math.floor(100000 + Math.random() * 900000);
-    const mockPermissions = { metadata: 'read', contents: 'write', pull_requests: 'write' };
+    const mockPermissions: Prisma.InputJsonObject = { metadata: 'read', contents: 'write', pull_requests: 'write' };
 
     const dbInstallation = await prisma.gitHubInstallation.create({
       data: {
@@ -54,7 +69,7 @@ export async function POST(request: Request) {
         installationId,
         targetType: 'Organization',
         targetLogin: orgName,
-        permissions: mockPermissions as any,
+        permissions: mockPermissions,
       },
     });
 
@@ -102,9 +117,9 @@ export async function POST(request: Request) {
       repositories: createdRepos,
     }, { status: 201 });
 
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { error: error.message || 'Failed to create mock installation' },
+      { error: error instanceof Error ? error.message : 'Failed to create mock installation' },
       { status: 500 }
     );
   }

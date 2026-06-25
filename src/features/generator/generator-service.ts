@@ -190,7 +190,7 @@ function generateReadme(input: GenerationInput, version: BlueprintVersion): Gene
     }
   }
 
-  lines.push('', '---', '', '⚠️ Do not edit files tracked by `.infrapack.json` manually.', '');
+  lines.push('', '---', '', 'Warning: do not edit files tracked by `.stacksmith.json` manually.', '');
 
   return { path: 'README.md', content: lines.join('\n') };
 }
@@ -288,7 +288,7 @@ export async function generate(input: GenerationInput): Promise<GenerationResult
     content: readme.content,
   });
 
-  // 4. Generate .infrapack.json manifest (must be last, to capture all paths)
+  // 4. Generate .stacksmith.json manifest (legacy .infrapack.json remains readable)
   const managedPaths = files.map((f) => f.path);
   const manifestFile = createManifest({
     blueprintSlug: input.blueprintSlug,
@@ -296,7 +296,7 @@ export async function generate(input: GenerationInput): Promise<GenerationResult
     deploymentId: input.deploymentId,
     managedFiles: [
       ...managedPaths,
-      path.posix.join(input.targetDir, '.infrapack.json'),
+      path.posix.join(input.targetDir, '.stacksmith.json'),
     ],
   });
   files.push({

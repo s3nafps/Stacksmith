@@ -8,11 +8,10 @@ export default defineConfig({
       NEXTAUTH_SECRET: 'dev-secret-change-in-production-min-32-chars-long',
       TOKEN_ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000000',
       ENCRYPTION_KEY: 'dev-secret-change-in-production-min-32-chars-long',
-      MOCK_GITHUB: 'true',
-      NEXT_PUBLIC_MOCK_GITHUB: 'true',
       ENABLE_DEMO_AUTH: 'true',
       ENABLE_RUNNER_SIMULATOR: 'true',
       MOCK_GITHUB_API: 'true',
+      NEXT_PUBLIC_MOCK_GITHUB_API: 'true',
     },
   },
   resolve: {
@@ -21,4 +20,3 @@ export default defineConfig({
     },
   },
 });
-

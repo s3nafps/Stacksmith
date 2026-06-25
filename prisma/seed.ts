@@ -80,7 +80,7 @@ async function main() {
     data: {
       id: 'mock-user-id',
       name: 'Demo Architect',
-      email: 'demo@infrapack.dev',
+      email: 'demo@stacksmith.local',
       image: 'https://avatars.githubusercontent.com/u/9919?v=4', // GitHub Octocat
     },
   });

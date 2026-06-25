@@ -25,7 +25,7 @@ export function isPathSegmentSafe(segment: string): boolean {
   }
 
   // Must not start with a dot (hidden files) unless explicitly allowed
-  if (segment.startsWith('.') && segment !== '.infrapack.json') return false;
+  if (segment.startsWith('.') && !['.stacksmith.json', '.infrapack.json'].includes(segment)) return false;
 
   return true;
 }
@@ -85,5 +85,5 @@ export function generateBranchName(blueprintSlug: string, deploymentId: string):
     .replace(/[^a-z0-9]/g, '')
     .slice(0, 8);
 
-  return `infrapack/${safeBlueprintSlug}/${safeId}`;
+  return `stacksmith/${safeBlueprintSlug}/${safeId}`;
 }

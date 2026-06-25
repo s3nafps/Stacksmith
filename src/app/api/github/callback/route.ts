@@ -4,8 +4,23 @@ import { prisma } from '@/lib/prisma';
 import { encryptToken } from '@/lib/encryption';
 import { cookies } from 'next/headers';
 import { checkWorkspacePermission } from '@/lib/rbac';
+import { env, isEnabled } from '@/lib/env';
+import type { Prisma } from '@prisma/client';
 
 export async function GET(request: Request) {
+  if (!isEnabled('MOCK_GITHUB_API')) {
+    return NextResponse.json(
+      { error: 'GitHub App integration is not configured. Demo installation callbacks require MOCK_GITHUB_API=true.' },
+      { status: 501 }
+    );
+  }
+  if (env.NODE_ENV === 'production' && !isEnabled('ALLOW_DEMO_PRODUCTION')) {
+    return NextResponse.json(
+      { error: 'Mock GitHub installation callback is disabled in production' },
+      { status: 403 }
+    );
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -53,7 +68,7 @@ export async function GET(request: Request) {
     }
 
     // 2. Create the GitHubInstallation record in the DB
-    const mockPermissions = { metadata: 'read', contents: 'write', pull_requests: 'write' };
+    const mockPermissions: Prisma.InputJsonObject = { metadata: 'read', contents: 'write', pull_requests: 'write' };
 
     let dbInstallation = await prisma.gitHubInstallation.findUnique({
       where: { installationId },
@@ -68,7 +83,7 @@ export async function GET(request: Request) {
           installationId,
           targetType: 'Organization',
           targetLogin,
-          permissions: mockPermissions as any,
+          permissions: mockPermissions,
         },
       });
     }
@@ -118,9 +133,9 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.redirect(new URL('/connections?success=github-app', request.url));
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { error: error.message || 'Failed to complete GitHub App installation' },
+      { error: error instanceof Error ? error.message : 'Failed to complete GitHub App installation' },
       { status: 500 }
     );
   }

@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+playwright-report/
+test-results/
 
 # next.js
 /.next/
@@ -23,6 +25,14 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.crt
+*.p12
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+*.tfvars.json
 
 # debug
 npm-debug.log*
@@ -44,4 +54,6 @@ next-env.d.ts
 /dev.db
 /test.db
 *.db
-
+*.db-journal
+*.sqlite
+*.sqlite3

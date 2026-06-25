@@ -10,7 +10,7 @@ export interface ConflictEntry {
  * Compares the old manifest's managed files against the current files
  * that actually exist in the repository to detect manual modifications.
  *
- * @param oldManifest - The manifest from the last InfraPack generation.
+ * @param oldManifest - The manifest from the last Stacksmith generation.
  * @param currentFiles - Map of file paths to their current content hashes (or null if deleted).
  * @param originalHashes - Map of file paths to the content hashes at generation time.
  */
@@ -47,7 +47,7 @@ export function compareManifests(
   for (const [filePath] of currentFiles) {
     if (
       !oldManifest.managedFiles.includes(filePath) &&
-      filePath !== '.infrapack.json'
+      !['.stacksmith.json', '.infrapack.json'].some((name) => filePath.endsWith(name))
     ) {
       // Only flag files that share the same base directory as managed files
       const managedDirs = new Set(

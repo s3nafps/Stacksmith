@@ -4,7 +4,7 @@ import { NotFoundError, AppError } from '@/lib/errors';
 import { decryptToken } from '@/lib/encryption';
 import { compareVersions, checkForUpdates } from '@/features/blueprints/blueprint-service';
 import { generate } from '@/features/generator/generator-service';
-import { parseManifest } from '@/features/generator/manifest';
+import { getLegacyManifestFilename, getManifestFilename, parseManifest } from '@/features/generator/manifest';
 import { getGitHubProvider } from '@/features/github';
 import { compareManifests, simpleHash, type ConflictEntry } from './conflict-detector';
 import type { VersionComparison } from '@/features/blueprints/blueprint-service';
@@ -197,13 +197,19 @@ async function detectConflictsInternal(
   }
 
   // Get the manifest from the repo
-  const manifestPath = `${deployment.targetDir}/.infrapack.json`;
-  const manifestContent = await provider.getFileContent(
-    accessToken,
-    repo.fullName,
-    manifestPath,
-    repo.defaultBranch
-  );
+  const manifestContent =
+    await provider.getFileContent(
+      accessToken,
+      repo.fullName,
+      `${deployment.targetDir}/${getManifestFilename()}`,
+      repo.defaultBranch
+    ) ??
+    await provider.getFileContent(
+      accessToken,
+      repo.fullName,
+      `${deployment.targetDir}/${getLegacyManifestFilename()}`,
+      repo.defaultBranch
+    );
 
   if (!manifestContent) {
     return [];

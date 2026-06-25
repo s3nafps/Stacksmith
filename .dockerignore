@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+dev.db
+test.db
+*.db
+coverage
+playwright-report
+test-results
+*.tfstate
+*.tfstate.*
+.terraform
