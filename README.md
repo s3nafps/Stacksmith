@@ -1,6 +1,6 @@
-# InfraPack
+# Stacksmith
 
-InfraPack is a local SaaS MVP for generating curated AWS Terraform blueprints and opening GitHub pull requests. It does not apply infrastructure or host Terraform state.
+Stacksmith is a local SaaS MVP for generating curated AWS Terraform blueprints and opening GitHub pull requests. It does not apply infrastructure or host Terraform state.
 
 ## Setup
 
@@ -17,19 +17,25 @@ Open http://localhost:3000.
 
 Copy `.env.example` to `.env.local`.
 
-For sandbox mode:
+For sandbox/demo mode:
 
 ```env
 DATABASE_URL="file:./dev.db"
-MOCK_GITHUB="true"
-NEXT_PUBLIC_MOCK_GITHUB="true"
+ENABLE_DEMO_AUTH="true"
+NEXT_PUBLIC_ENABLE_DEMO_AUTH="true"
+ENABLE_RUNNER_SIMULATOR="true"
+MOCK_GITHUB_API="true"
+NEXT_PUBLIC_MOCK_GITHUB_API="true"
 ```
 
 For real GitHub OAuth mode:
 
 ```env
-MOCK_GITHUB="false"
-NEXT_PUBLIC_MOCK_GITHUB="false"
+ENABLE_DEMO_AUTH="false"
+NEXT_PUBLIC_ENABLE_DEMO_AUTH="false"
+ENABLE_RUNNER_SIMULATOR="false"
+MOCK_GITHUB_API="false"
+NEXT_PUBLIC_MOCK_GITHUB_API="false"
 GITHUB_CLIENT_ID="..."
 GITHUB_CLIENT_SECRET="..."
 ```
@@ -55,7 +61,6 @@ Open `/blueprints/new` to create a custom blueprint. The builder writes:
 
 ```text
 blueprints/custom/<slug>/blueprint.json
-blueprints/custom/<slug>/.infrapack-owner.json
 blueprints/custom/<slug>/versions/1.0.0/*.tf
 ```
 

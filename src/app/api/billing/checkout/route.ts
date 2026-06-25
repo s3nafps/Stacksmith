@@ -11,6 +11,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  if (process.env.ENABLE_MOCK_BILLING !== 'true') {
+    return NextResponse.json(
+      { error: 'Billing is not available yet' },
+      { status: 503 }
+    );
+  }
+
   try {
     const { workspaceId, plan } = await request.json();
 
