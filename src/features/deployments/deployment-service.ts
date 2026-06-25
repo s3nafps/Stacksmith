@@ -577,9 +577,6 @@ export async function createPullRequest(
       workspaceId: deployment.workspaceId,
     });
 
-    const provider = getGitHubProvider();
-
-    // Get the repo full name and access token
     const repo = deployment.repository;
     if (!repo) {
       throw new AppError('No repository linked to this deployment', 400, 'NO_REPOSITORY');
@@ -598,6 +595,8 @@ export async function createPullRequest(
     if (!accessToken) {
       throw new AppError('Failed to decrypt access token', 500, 'TOKEN_ERROR');
     }
+
+    const provider = getGitHubProvider();
 
     const branchName = generateBranchName(deployment.blueprint.slug, deploymentId);
 
