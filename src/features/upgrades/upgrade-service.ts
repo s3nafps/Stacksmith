@@ -8,6 +8,7 @@ import { parseManifest } from '@/features/generator/manifest';
 import { getGitHubProvider } from '@/features/github';
 import { compareManifests, simpleHash, type ConflictEntry } from './conflict-detector';
 import type { VersionComparison } from '@/features/blueprints/blueprint-service';
+import { decrypt } from '@/lib/vault';
 
 export interface UpgradeCheck {
   available: boolean;
@@ -165,9 +166,12 @@ export async function startUpgrade(
   });
 
   // Re-generate with new version
-  const inputsMap: Record<string, string | number | boolean> = {};
+  const inputsMap: Record<string, { value: string | number | boolean; sensitive: boolean }> = {};
   for (const inp of deployment.inputs) {
-    inputsMap[inp.key] = inp.value;
+    inputsMap[inp.key] = {
+      value: inp.isSensitive ? decrypt(inp.value) : inp.value,
+      sensitive: inp.isSensitive,
+    };
   }
 
   await generate({
@@ -177,6 +181,7 @@ export async function startUpgrade(
     targetDir: deployment.targetDir,
     environmentName: deployment.environmentName,
     inputs: inputsMap,
+    workspaceId: deployment.workspaceId,
   });
 
   await prisma.deployment.update({
@@ -276,9 +281,12 @@ async function detectConflictsInternal(
   const manifest = parseManifest(manifestContent);
 
   // Re-generate to get original hashes
-  const inputsMap: Record<string, string | number | boolean> = {};
+  const inputsMap: Record<string, { value: string | number | boolean; sensitive: boolean }> = {};
   for (const inp of deployment.inputs) {
-    inputsMap[inp.key] = inp.value;
+    inputsMap[inp.key] = {
+      value: inp.isSensitive ? decrypt(inp.value) : inp.value,
+      sensitive: inp.isSensitive,
+    };
   }
 
   const genResult = await generate({
@@ -288,6 +296,7 @@ async function detectConflictsInternal(
     targetDir: deployment.targetDir,
     environmentName: deployment.environmentName,
     inputs: inputsMap,
+    workspaceId: deployment.workspaceId,
   });
 
   const originalHashes = new Map<string, string>();

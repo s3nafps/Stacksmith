@@ -126,10 +126,12 @@ export async function GET(
           );
 
           try {
-            // Decrypt variables
-            const inputsMap: Record<string, string | number | boolean> = {};
+            const inputsMap: Record<string, { value: string | number | boolean; sensitive: boolean }> = {};
             for (const inp of deployment.inputs) {
-              inputsMap[inp.key] = inp.isSensitive ? decrypt(inp.value) : inp.value;
+              inputsMap[inp.key] = {
+                value: inp.isSensitive ? decrypt(inp.value) : inp.value,
+                sensitive: inp.isSensitive,
+              };
             }
 
             const genResult = await generate({
@@ -139,6 +141,7 @@ export async function GET(
               targetDir: deployment.targetDir,
               environmentName: deployment.environmentName,
               inputs: inputsMap,
+              workspaceId: deployment.workspaceId,
             });
 
             // Write files to temp path

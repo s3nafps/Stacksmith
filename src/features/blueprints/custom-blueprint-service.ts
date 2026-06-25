@@ -200,12 +200,19 @@ export async function createCustomBlueprint(
 export async function updateCustomBlueprint(
   slug: string,
   input: CustomBlueprintInput,
-  userId: string
+  userId: string,
+  workspaceId?: string
 ) {
   assertSafeSlug(slug);
 
-  const bp = await prisma.blueprint.findUnique({
-    where: { slug },
+  const bp = await prisma.blueprint.findFirst({
+    where: {
+      slug,
+      OR: [
+        { ownerId: null },
+        ...(workspaceId ? [{ workspaceId }] : []),
+      ],
+    },
     include: { versions: { orderBy: { createdAt: 'desc' } } },
   });
 
@@ -262,15 +269,22 @@ export async function createCustomBlueprintVersion(
   slug: string,
   version: string,
   input: CustomBlueprintInput,
-  userId: string
+  userId: string,
+  workspaceId?: string
 ) {
   assertSafeSlug(slug);
   if (!/^\d+\.\d+\.\d+$/.test(version)) {
     throw new ValidationError('Invalid version format. Use semver e.g., 1.1.0');
   }
 
-  const bp = await prisma.blueprint.findUnique({
-    where: { slug },
+  const bp = await prisma.blueprint.findFirst({
+    where: {
+      slug,
+      OR: [
+        { ownerId: null },
+        ...(workspaceId ? [{ workspaceId }] : []),
+      ],
+    },
     include: { versions: true },
   });
 
@@ -322,11 +336,17 @@ export async function createCustomBlueprintVersion(
   return toBlueprintMetadata(updated);
 }
 
-export async function deleteCustomBlueprint(slug: string, userId: string) {
+export async function deleteCustomBlueprint(slug: string, userId: string, workspaceId?: string) {
   assertSafeSlug(slug);
 
-  const bp = await prisma.blueprint.findUnique({
-    where: { slug },
+  const bp = await prisma.blueprint.findFirst({
+    where: {
+      slug,
+      OR: [
+        { ownerId: null },
+        ...(workspaceId ? [{ workspaceId }] : []),
+      ],
+    },
   });
 
   if (!bp) throw new NotFoundError('Blueprint', slug);
@@ -344,10 +364,17 @@ export async function deleteCustomBlueprint(slug: string, userId: string) {
 export async function syncCustomBlueprintToGitHub(
   slug: string,
   repositoryId: string,
-  userId: string
+  userId: string,
+  workspaceId?: string
 ) {
-  const bp = await prisma.blueprint.findUnique({
-    where: { slug },
+  const bp = await prisma.blueprint.findFirst({
+    where: {
+      slug,
+      OR: [
+        { ownerId: null },
+        ...(workspaceId ? [{ workspaceId }] : []),
+      ],
+    },
     include: {
       versions: {
         orderBy: { createdAt: 'desc' },

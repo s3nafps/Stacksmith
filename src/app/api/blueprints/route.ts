@@ -3,6 +3,7 @@ import { listBlueprints } from '@/features/blueprints/blueprint-service';
 import { auth } from '@/auth';
 import { errorJson } from '@/lib/api-response';
 import type { BlueprintFilter } from '@/features/blueprints/blueprint-service';
+import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -18,12 +19,15 @@ export async function GET(request: Request) {
   const tags = tagsParam ? tagsParam.split(',') : undefined;
 
   try {
+    const cookieStore = await cookies();
+    const workspaceId = cookieStore.get('activeWorkspaceId')?.value;
     const blueprints = await listBlueprints({
       category,
       difficulty: difficulty || undefined,
       search,
       tags,
       userId: session.user.id,
+      workspaceId,
     });
     return NextResponse.json(blueprints);
   } catch (error: unknown) {

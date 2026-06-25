@@ -115,7 +115,9 @@ interface UpgradeDetails {
 const statusBadgeStyles: Record<string, { label: string; variant: 'info' | 'success' | 'warning' | 'error' | 'neutral' }> = {
   DRAFT: { label: 'Draft', variant: 'neutral' },
   GENERATING: { label: 'Generating', variant: 'info' },
+  GENERATED: { label: 'Generated', variant: 'info' },
   VALIDATING: { label: 'Validating', variant: 'info' },
+  VALIDATED: { label: 'Validated', variant: 'success' },
   FAILED_VALIDATION: { label: 'Validation Failed', variant: 'error' },
   READY: { label: 'Ready', variant: 'success' },
   CREATING_PULL_REQUEST: { label: 'Creating PR', variant: 'info' },
@@ -357,13 +359,13 @@ export default function DeploymentDetailPage({ params }: { params: Promise<{ id:
                     Upgrade Available
                   </Button>
                 )}
-                {(deployment.status === 'READY' || deployment.status === 'FAILED_VALIDATION' || deployment.status === 'FAILED') && (
+                {(deployment.status === 'READY' || deployment.status === 'GENERATED' || deployment.status === 'VALIDATED' || deployment.status === 'FAILED_VALIDATION' || deployment.status === 'FAILED') && (
                   <Button onClick={handleValidate} loading={actionLoading} variant="outline" className="gap-1.5">
                     <RefreshCw className="w-3.5 h-3.5" />
                     Run Validation
                   </Button>
                 )}
-                {deployment.status === 'READY' && (
+                {(deployment.status === 'READY' || deployment.status === 'VALIDATED') && (
                   <Button onClick={handleCreatePR} loading={actionLoading} className="gap-1.5 bg-gradient-to-r from-indigo-500 to-violet-600">
                     <GitPullRequest className="w-4 h-4" />
                     Create Pull Request

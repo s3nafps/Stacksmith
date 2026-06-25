@@ -42,7 +42,9 @@ function getErrorMessage(error: unknown, fallback: string): string {
 const statusBadgeStyles: Record<string, { label: string; variant: 'info' | 'success' | 'warning' | 'error' | 'neutral' }> = {
   DRAFT: { label: 'Draft', variant: 'neutral' },
   GENERATING: { label: 'Generating', variant: 'info' },
+  GENERATED: { label: 'Generated', variant: 'info' },
   VALIDATING: { label: 'Validating', variant: 'info' },
+  VALIDATED: { label: 'Validated', variant: 'success' },
   FAILED_VALIDATION: { label: 'Validation Failed', variant: 'error' },
   READY: { label: 'Ready', variant: 'success' },
   CREATING_PULL_REQUEST: { label: 'Creating PR', variant: 'info' },

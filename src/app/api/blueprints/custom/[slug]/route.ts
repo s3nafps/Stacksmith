@@ -6,6 +6,8 @@ import {
   deleteCustomBlueprint,
   type CustomBlueprintInput,
 } from '@/features/blueprints/custom-blueprint-service';
+import { cookies } from 'next/headers';
+import { checkWorkspacePermission } from '@/lib/rbac';
 
 export async function PATCH(
   request: Request,
@@ -17,9 +19,17 @@ export async function PATCH(
   }
 
   try {
+    const cookieStore = await cookies();
+    const workspaceId = cookieStore.get('activeWorkspaceId')?.value;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace ID is required' }, { status: 400 });
+    }
+
+    await checkWorkspacePermission(session.user.id, workspaceId, 'OPERATOR');
+
     const { slug } = await params;
     const body = (await request.json()) as CustomBlueprintInput;
-    const blueprint = await updateCustomBlueprint(slug, body, session.user.id);
+    const blueprint = await updateCustomBlueprint(slug, body, session.user.id, workspaceId);
     return NextResponse.json(blueprint);
   } catch (error: unknown) {
     return errorJson(error, 'Failed to update custom blueprint');
@@ -36,8 +46,16 @@ export async function DELETE(
   }
 
   try {
+    const cookieStore = await cookies();
+    const workspaceId = cookieStore.get('activeWorkspaceId')?.value;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace ID is required' }, { status: 400 });
+    }
+
+    await checkWorkspacePermission(session.user.id, workspaceId, 'OPERATOR');
+
     const { slug } = await params;
-    const result = await deleteCustomBlueprint(slug, session.user.id);
+    const result = await deleteCustomBlueprint(slug, session.user.id, workspaceId);
     return NextResponse.json(result);
   } catch (error: unknown) {
     return errorJson(error, 'Failed to delete custom blueprint');

@@ -72,10 +72,12 @@ async function setStatus(
 
   const ALLOWED_TRANSITIONS: Record<DeploymentStatus, Set<DeploymentStatus>> = {
     DRAFT: new Set<DeploymentStatus>(['GENERATING']),
-    GENERATING: new Set<DeploymentStatus>(['VALIDATING', 'READY', 'FAILED']),
-    VALIDATING: new Set<DeploymentStatus>(['READY', 'FAILED_VALIDATION', 'FAILED']),
+    GENERATING: new Set<DeploymentStatus>(['GENERATED', 'VALIDATING', 'VALIDATED', 'READY', 'FAILED']),
+    GENERATED: new Set<DeploymentStatus>(['VALIDATING', 'GENERATING', 'FAILED']),
+    VALIDATING: new Set<DeploymentStatus>(['VALIDATED', 'FAILED_VALIDATION', 'FAILED']),
+    VALIDATED: new Set<DeploymentStatus>(['CREATING_PULL_REQUEST', 'GENERATING']),
     FAILED_VALIDATION: new Set<DeploymentStatus>(['GENERATING']),
-    READY: new Set<DeploymentStatus>(['CREATING_PULL_REQUEST', 'GENERATING']),
+    READY: new Set<DeploymentStatus>(['CREATING_PULL_REQUEST', 'GENERATING', 'VALIDATING']),
     CREATING_PULL_REQUEST: new Set<DeploymentStatus>(['PULL_REQUEST_OPEN', 'FAILED']),
     PULL_REQUEST_OPEN: new Set<DeploymentStatus>(['MERGED', 'CLOSED', 'UPDATE_AVAILABLE']),
     MERGED: new Set<DeploymentStatus>([]),
@@ -106,9 +108,27 @@ export async function createDraft(
 ): Promise<string> {
   const parsed = DeploymentConfigSchema.parse(config);
 
-  // Verify blueprint exists
-  const blueprint = await prisma.blueprint.findUnique({
-    where: { slug: parsed.blueprintSlug },
+  // Resolve workspaceId
+  let resolvedWorkspaceId = parsed.workspaceId;
+  if (!resolvedWorkspaceId) {
+    const member = await prisma.workspaceMember.findFirst({
+      where: { userId },
+    });
+    if (!member) {
+      throw new AppError('User does not belong to any workspace', 400, 'NO_WORKSPACE');
+    }
+    resolvedWorkspaceId = member.workspaceId;
+  }
+
+  // Verify blueprint exists with workspace scope scoping
+  const blueprint = await prisma.blueprint.findFirst({
+    where: {
+      slug: parsed.blueprintSlug,
+      OR: [
+        { ownerId: null },
+        { workspaceId: resolvedWorkspaceId },
+      ],
+    },
     include: { versions: true },
   });
 
@@ -124,18 +144,6 @@ export async function createDraft(
       'BlueprintVersion',
       `${parsed.blueprintSlug}@${parsed.blueprintVersion}`
     );
-  }
-
-  // Resolve workspaceId
-  let resolvedWorkspaceId = parsed.workspaceId;
-  if (!resolvedWorkspaceId) {
-    const member = await prisma.workspaceMember.findFirst({
-      where: { userId },
-    });
-    if (!member) {
-      throw new AppError('User does not belong to any workspace', 400, 'NO_WORKSPACE');
-    }
-    resolvedWorkspaceId = member.workspaceId;
   }
 
   // Fetch workspace details and check limits
@@ -306,9 +314,12 @@ export async function generateDeployment(
   });
 
   try {
-    const inputsMap: Record<string, string | number | boolean> = {};
+    const inputsMap: Record<string, { value: string | number | boolean; sensitive: boolean }> = {};
     for (const inp of deployment.inputs) {
-      inputsMap[inp.key] = inp.isSensitive ? decrypt(inp.value) : inp.value;
+      inputsMap[inp.key] = {
+        value: inp.isSensitive ? decrypt(inp.value) : inp.value,
+        sensitive: inp.isSensitive,
+      };
     }
 
     const result = await generate({
@@ -318,6 +329,7 @@ export async function generateDeployment(
       targetDir: deployment.targetDir,
       environmentName: deployment.environmentName,
       inputs: inputsMap,
+      workspaceId: deployment.workspaceId,
     });
 
     const managedFiles = result.files.map((f) => f.path);
@@ -327,7 +339,7 @@ export async function generateDeployment(
       configSnapshotMap[inp.key] = inp.isSensitive ? '[REDACTED]' : inp.value;
     }
 
-    await setStatus(deploymentId, 'READY', {
+    await setStatus(deploymentId, 'GENERATED', {
       managedFiles,
       generatorVersion: '1.0.0',
       configSnapshot: configSnapshotMap,
@@ -375,9 +387,12 @@ export async function previewDeploymentFiles(
     throw new NotFoundError('Deployment', deploymentId);
   }
 
-  const inputsMap: Record<string, string | number | boolean> = {};
+  const inputsMap: Record<string, { value: string | number | boolean; sensitive: boolean }> = {};
   for (const inp of deployment.inputs) {
-    inputsMap[inp.key] = inp.isSensitive ? decrypt(inp.value) : inp.value;
+    inputsMap[inp.key] = {
+      value: inp.isSensitive ? '********' : inp.value,
+      sensitive: inp.isSensitive,
+    };
   }
 
   const result = await generate({
@@ -387,6 +402,7 @@ export async function previewDeploymentFiles(
     targetDir: deployment.targetDir,
     environmentName: deployment.environmentName,
     inputs: inputsMap,
+    workspaceId: deployment.workspaceId,
   });
 
   return result.files;
@@ -404,6 +420,14 @@ export async function validateDeployment(
     throw new NotFoundError('Deployment', deploymentId);
   }
 
+  if (deployment.blueprint.ownerId) {
+    throw new AppError(
+      'Custom blueprint validation is temporarily unavailable',
+      503,
+      'CUSTOM_VALIDATION_DISABLED'
+    );
+  }
+
   await setStatus(deploymentId, 'VALIDATING');
   await logActivity({
     deploymentId,
@@ -414,9 +438,12 @@ export async function validateDeployment(
 
   try {
     // Re-generate to get the files
-    const inputsMap: Record<string, string | number | boolean> = {};
+    const inputsMap: Record<string, { value: string | number | boolean; sensitive: boolean }> = {};
     for (const inp of deployment.inputs) {
-      inputsMap[inp.key] = inp.isSensitive ? decrypt(inp.value) : inp.value;
+      inputsMap[inp.key] = {
+        value: inp.isSensitive ? decrypt(inp.value) : inp.value,
+        sensitive: inp.isSensitive,
+      };
     }
 
     const genResult = await generate({
@@ -426,6 +453,7 @@ export async function validateDeployment(
       targetDir: deployment.targetDir,
       environmentName: deployment.environmentName,
       inputs: inputsMap,
+      workspaceId: deployment.workspaceId,
     });
 
     const validator = new TerraformValidator();
@@ -455,7 +483,7 @@ export async function validateDeployment(
     });
 
     const newStatus: DeploymentStatus =
-      result.status === 'passed' ? 'READY' : 'FAILED_VALIDATION';
+      result.status === 'passed' ? 'VALIDATED' : 'FAILED_VALIDATION';
 
     await setStatus(deploymentId, newStatus);
 
@@ -498,9 +526,9 @@ export async function createPullRequest(
     throw new NotFoundError('Deployment', deploymentId);
   }
 
-  if (deployment.status !== 'READY') {
+  if (deployment.status !== 'VALIDATED' && deployment.status !== 'READY') {
     throw new AppError(
-      'Deployment must be in READY state to create a PR',
+      'Deployment must be in VALIDATED state to create a PR',
       400,
       'INVALID_STATE'
     );
@@ -530,9 +558,12 @@ export async function createPullRequest(
 
   try {
     // Re-generate files
-    const inputsMap: Record<string, string | number | boolean> = {};
+    const inputsMap: Record<string, { value: string | number | boolean; sensitive: boolean }> = {};
     for (const inp of deployment.inputs) {
-      inputsMap[inp.key] = inp.isSensitive ? decrypt(inp.value) : inp.value;
+      inputsMap[inp.key] = {
+        value: inp.isSensitive ? decrypt(inp.value) : inp.value,
+        sensitive: inp.isSensitive,
+      };
     }
 
     const genResult = await generate({
@@ -542,6 +573,7 @@ export async function createPullRequest(
       targetDir: deployment.targetDir,
       environmentName: deployment.environmentName,
       inputs: inputsMap,
+      workspaceId: deployment.workspaceId,
     });
 
     const provider = getGitHubProvider();

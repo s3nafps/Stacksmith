@@ -8,6 +8,7 @@ export interface BlueprintFilter {
   search?: string;
   tags?: string[];
   userId?: string;
+  workspaceId?: string;
 }
 
 export interface VersionComparison {
@@ -53,7 +54,7 @@ export async function listBlueprints(
       isActive: true,
       OR: [
         { ownerId: null },
-        ...(filter?.userId ? [{ ownerId: filter.userId }] : []),
+        ...(filter?.workspaceId ? [{ workspaceId: filter.workspaceId }] : []),
       ],
     },
     include: {
@@ -102,10 +103,17 @@ export async function listBlueprints(
 }
 
 export async function getBlueprint(
-  slug: string
+  slug: string,
+  workspaceId?: string
 ): Promise<BlueprintMetadata> {
-  const bp = await prisma.blueprint.findUnique({
-    where: { slug },
+  const bp = await prisma.blueprint.findFirst({
+    where: {
+      slug,
+      OR: [
+        { ownerId: null },
+        ...(workspaceId ? [{ workspaceId }] : []),
+      ],
+    },
     include: {
       versions: {
         orderBy: { createdAt: 'asc' },
@@ -122,10 +130,17 @@ export async function getBlueprint(
 
 export async function getBlueprintVersion(
   slug: string,
-  version: string
+  version: string,
+  workspaceId?: string
 ): Promise<BlueprintVersion> {
-  const bp = await prisma.blueprint.findUnique({
-    where: { slug },
+  const bp = await prisma.blueprint.findFirst({
+    where: {
+      slug,
+      OR: [
+        { ownerId: null },
+        ...(workspaceId ? [{ workspaceId }] : []),
+      ],
+    },
     include: {
       versions: {
         where: { version },
@@ -148,8 +163,8 @@ export async function getBlueprintVersion(
   };
 }
 
-export async function getLatestVersion(slug: string): Promise<BlueprintVersion> {
-  const bp = await getBlueprint(slug);
+export async function getLatestVersion(slug: string, workspaceId?: string): Promise<BlueprintVersion> {
+  const bp = await getBlueprint(slug, workspaceId);
   if (bp.versions.length === 0) {
     throw new NotFoundError('BlueprintVersion', `${slug}@latest`);
   }
@@ -159,9 +174,10 @@ export async function getLatestVersion(slug: string): Promise<BlueprintVersion> 
 export async function compareVersions(
   slug: string,
   fromVersion: string,
-  toVersion: string
+  toVersion: string,
+  workspaceId?: string
 ): Promise<VersionComparison> {
-  const bp = await getBlueprint(slug);
+  const bp = await getBlueprint(slug, workspaceId);
   const from = bp.versions.find((v) => v.version === fromVersion);
   const to = bp.versions.find((v) => v.version === toVersion);
 
@@ -187,9 +203,10 @@ export async function compareVersions(
 
 export async function checkForUpdates(
   blueprintSlug: string,
-  currentVersion: string
+  currentVersion: string,
+  workspaceId?: string
 ): Promise<{ available: boolean; latestVersion: string }> {
-  const latest = await getLatestVersion(blueprintSlug);
+  const latest = await getLatestVersion(blueprintSlug, workspaceId);
   return {
     available: latest.version !== currentVersion,
     latestVersion: latest.version,
