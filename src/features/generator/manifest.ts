@@ -1,11 +1,9 @@
 import type { FileManifest, GeneratedFile } from '@/types/deployment';
 
-const MANIFEST_FILENAME = '.infrapack.json';
+export const MANIFEST_FILENAME = '.stacksmith.json';
+export const LEGACY_MANIFEST_FILENAME = '.infrapack.json';
 const GENERATOR_VERSION = '1.0.0';
 
-/**
- * Creates a new .infrapack.json manifest file.
- */
 export function createManifest(params: {
   blueprintSlug: string;
   blueprintVersion: string;
@@ -27,9 +25,6 @@ export function createManifest(params: {
   };
 }
 
-/**
- * Parses a .infrapack.json manifest from its content string.
- */
 export function parseManifest(content: string): FileManifest {
   const raw = JSON.parse(content) as FileManifest;
 
@@ -59,6 +54,10 @@ export function compareManifests(
 
 export function getManifestFilename(): string {
   return MANIFEST_FILENAME;
+}
+
+export function getLegacyManifestFilename(): string {
+  return LEGACY_MANIFEST_FILENAME;
 }
 
 export function getGeneratorVersion(): string {

@@ -1,7 +1,8 @@
 {
-  "name": "infrapack-temp",
+  "name": "stacksmith",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,9 +13,11 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "db:generate": "prisma generate",
+    "db:push": "prisma db push",
     "db:push:test": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma db push --force-reset"
+    "db:reset": "prisma db push --force-reset",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

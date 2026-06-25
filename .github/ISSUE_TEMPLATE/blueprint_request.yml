@@ -1,0 +1,34 @@
+name: Blueprint request
+description: Request a new infrastructure blueprint
+title: "[Blueprint]: "
+labels: ["blueprint"]
+body:
+  - type: input
+    id: provider
+    attributes:
+      label: Cloud provider
+  - type: textarea
+    id: architecture
+    attributes:
+      label: Desired architecture
+  - type: textarea
+    id: resources
+    attributes:
+      label: Required resources
+  - type: textarea
+    id: security
+    attributes:
+      label: Security expectations
+  - type: textarea
+    id: cost
+    attributes:
+      label: Cost expectations
+  - type: input
+    id: environments
+    attributes:
+      label: Target environments
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Willing to contribute?
+      options: ["yes", "no", "maybe"]

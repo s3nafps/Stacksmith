@@ -10,6 +10,7 @@ import { NotFoundError, AppError } from '@/lib/errors';
 import { decryptToken } from '@/lib/encryption';
 import type { DeploymentStatus, ActivityType, Prisma } from '@prisma/client';
 import { encrypt, decrypt } from '@/lib/vault';
+import { isEnabled } from '@/lib/env';
 
 function toJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -628,7 +629,7 @@ export async function createPullRequest(
         branchName,
         title: pr.title,
         status: 'open',
-        isMock: process.env.MOCK_GITHUB_API === 'true',
+        isMock: isEnabled('MOCK_GITHUB_API'),
       },
     });
 

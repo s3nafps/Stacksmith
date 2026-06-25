@@ -72,7 +72,7 @@ export class TerraformValidator implements InfrastructureValidator {
 
     // Create temp directory
     const tmpDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), `infrapack-validate-${input.deploymentId}-`)
+      path.join(os.tmpdir(), `stacksmith-validate-${input.deploymentId}-`)
     );
 
     try {

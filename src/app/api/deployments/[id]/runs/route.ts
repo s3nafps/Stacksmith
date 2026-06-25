@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { checkDeploymentPermission } from '@/lib/rbac';
+import { isEnabled } from '@/lib/env';
 
 export async function GET(
   request: Request,
@@ -33,7 +34,7 @@ export async function GET(
     return NextResponse.json({ error: err.message || 'Forbidden' }, { status: 403 });
   }
 
-  if (process.env.ENABLE_RUNNER_SIMULATOR !== 'true') {
+  if (!isEnabled('ENABLE_RUNNER_SIMULATOR')) {
     return NextResponse.json(
       { error: 'Hosted Terraform execution is disabled' },
       { status: 403 }
@@ -48,7 +49,7 @@ export async function GET(
     Connection: 'keep-alive',
   };
 
-  const isMockMode = process.env.ENABLE_RUNNER_SIMULATOR === 'true';
+  const isMockMode = isEnabled('ENABLE_RUNNER_SIMULATOR');
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -59,7 +60,7 @@ export async function GET(
       try {
         if (isMockMode) {
           // --- MOCK SIMULATOR RUNS ---
-          sendEvent(`\x1b[36m[InfraPack Runner - Sandbox Mode]\x1b[0m Starting ${action} for deployment: ${id}`);
+          sendEvent(`\x1b[36m[Stacksmith Runner - Simulator]\x1b[0m Starting ${action} for deployment: ${id}`);
           await sleep(500);
 
           sendEvent(`\x1b[32m[Command]\x1b[0m terraform init -no-color`);
@@ -115,7 +116,7 @@ export async function GET(
             });
           }
 
-          sendEvent(`\x1b[36m[InfraPack Runner]\x1b[0m Execution finished successfully.`);
+          sendEvent(`\x1b[36m[Stacksmith Runner]\x1b[0m Execution finished successfully.`);
           sendEvent(`[FINISHED]`);
           controller.close();
         } else {
