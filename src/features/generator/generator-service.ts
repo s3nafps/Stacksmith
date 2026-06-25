@@ -233,8 +233,16 @@ export async function generate(input: GenerationInput): Promise<GenerationResult
     }
   }
 
-  // 2. Generate terraform.tfvars from user inputs
-  const tfvarsContent = generateTfvars(input.inputs);
+  // 2. Generate terraform.tfvars from user inputs (excluding sensitive inputs to prevent committing secrets to git)
+  const nonSensitiveInputs: Record<string, string | number | boolean> = {};
+  for (const def of version.inputs) {
+    const value = input.inputs[def.name];
+    if (def.type !== 'sensitive' && value !== undefined && value !== null) {
+      nonSensitiveInputs[def.name] = value;
+    }
+  }
+
+  const tfvarsContent = generateTfvars(nonSensitiveInputs);
   files.push({
     path: path.posix.join(input.targetDir, 'terraform.tfvars'),
     content: tfvarsContent,

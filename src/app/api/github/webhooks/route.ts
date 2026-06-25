@@ -26,15 +26,18 @@ export async function POST(request: Request) {
   const signature = request.headers.get('x-hub-signature-256') || '';
   const event = request.headers.get('x-github-event') || '';
 
-  // Verify signature if GITHUB_WEBHOOK_SECRET is set
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
-  if (secret) {
-    if (!signature) {
-      return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
-    }
-    if (!verifySignature(payloadText, signature, secret)) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
+  if (!secret) {
+    console.error('[Webhook] GITHUB_WEBHOOK_SECRET is not configured');
+    return NextResponse.json({ error: 'Webhook secret is not configured' }, { status: 500 });
+  }
+
+  if (!signature) {
+    return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+  }
+
+  if (!verifySignature(payloadText, signature, secret)) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
   let body: GitHubPullRequestWebhook;

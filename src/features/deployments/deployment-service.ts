@@ -59,6 +59,39 @@ async function setStatus(
   status: DeploymentStatus,
   extra?: Record<string, unknown>
 ): Promise<void> {
+  const current = await prisma.deployment.findUnique({
+    where: { id: deploymentId },
+    select: { status: true },
+  });
+
+  if (!current) {
+    throw new NotFoundError('Deployment', deploymentId);
+  }
+
+  const currentStatus = current.status;
+
+  const ALLOWED_TRANSITIONS: Record<DeploymentStatus, Set<DeploymentStatus>> = {
+    DRAFT: new Set<DeploymentStatus>(['GENERATING']),
+    GENERATING: new Set<DeploymentStatus>(['VALIDATING', 'READY', 'FAILED']),
+    VALIDATING: new Set<DeploymentStatus>(['READY', 'FAILED_VALIDATION', 'FAILED']),
+    FAILED_VALIDATION: new Set<DeploymentStatus>(['GENERATING']),
+    READY: new Set<DeploymentStatus>(['CREATING_PULL_REQUEST', 'GENERATING']),
+    CREATING_PULL_REQUEST: new Set<DeploymentStatus>(['PULL_REQUEST_OPEN', 'FAILED']),
+    PULL_REQUEST_OPEN: new Set<DeploymentStatus>(['MERGED', 'CLOSED', 'UPDATE_AVAILABLE']),
+    MERGED: new Set<DeploymentStatus>([]),
+    CLOSED: new Set<DeploymentStatus>(['GENERATING']),
+    UPDATE_AVAILABLE: new Set<DeploymentStatus>(['GENERATING']),
+    FAILED: new Set<DeploymentStatus>(['GENERATING']),
+  };
+
+  if (currentStatus !== status && !ALLOWED_TRANSITIONS[currentStatus]?.has(status)) {
+    throw new AppError(
+      `Invalid state transition: Cannot change deployment status from ${currentStatus} to ${status}`,
+      400,
+      'INVALID_STATE_TRANSITION'
+    );
+  }
+
   await prisma.deployment.update({
     where: { id: deploymentId },
     data: { status, ...extra },
@@ -91,24 +124,6 @@ export async function createDraft(
       'BlueprintVersion',
       `${parsed.blueprintSlug}@${parsed.blueprintVersion}`
     );
-  }
-
-  // Resolve repositoryId (might be database UUID or GitHub ID number/string)
-  let resolvedRepositoryId: string | null = null;
-  if (parsed.repositoryId) {
-    const repoStr = String(parsed.repositoryId);
-    const repoNum = Number(parsed.repositoryId);
-    const dbRepo = await prisma.repository.findFirst({
-      where: {
-        OR: [
-          { id: repoStr },
-          { githubRepoId: isNaN(repoNum) ? -1 : repoNum },
-        ],
-      },
-    });
-    if (dbRepo) {
-      resolvedRepositoryId = dbRepo.id;
-    }
   }
 
   // Resolve workspaceId
@@ -151,6 +166,26 @@ export async function createDraft(
       402,
       'LIMIT_EXCEEDED'
     );
+  }
+
+  // Resolve repositoryId (might be database UUID or GitHub ID number/string) under workspace scope
+  let resolvedRepositoryId: string | null = null;
+  if (parsed.repositoryId) {
+    const repoStr = String(parsed.repositoryId);
+    const repoNum = Number(parsed.repositoryId);
+    const dbRepo = await prisma.repository.findFirst({
+      where: {
+        OR: [
+          { id: repoStr },
+          { githubRepoId: isNaN(repoNum) ? -1 : repoNum },
+        ],
+        workspaceId: resolvedWorkspaceId,
+      },
+    });
+    if (!dbRepo) {
+      throw new NotFoundError('Repository', repoStr);
+    }
+    resolvedRepositoryId = dbRepo.id;
   }
 
   const deploymentId = nanoid(12);
@@ -287,10 +322,15 @@ export async function generateDeployment(
 
     const managedFiles = result.files.map((f) => f.path);
 
+    const configSnapshotMap: Record<string, string | number | boolean> = {};
+    for (const inp of deployment.inputs) {
+      configSnapshotMap[inp.key] = inp.isSensitive ? '[REDACTED]' : inp.value;
+    }
+
     await setStatus(deploymentId, 'READY', {
       managedFiles,
       generatorVersion: '1.0.0',
-      configSnapshot: inputsMap,
+      configSnapshot: configSnapshotMap,
     });
 
     await logActivity({
@@ -415,12 +455,12 @@ export async function validateDeployment(
     });
 
     const newStatus: DeploymentStatus =
-      result.status === 'passed' || result.status === 'skipped' ? 'READY' : 'FAILED_VALIDATION';
+      result.status === 'passed' ? 'READY' : 'FAILED_VALIDATION';
 
     await setStatus(deploymentId, newStatus);
 
     const activityType: ActivityType =
-      result.status === 'passed' || result.status === 'skipped'
+      result.status === 'passed'
         ? 'VALIDATION_PASSED'
         : 'VALIDATION_FAILED';
 
@@ -466,6 +506,20 @@ export async function createPullRequest(
     );
   }
 
+  // Fetch latest validation run to ensure it passed (prevent skipped validation from opening PRs)
+  const latestValidation = await prisma.validationRun.findFirst({
+    where: { deploymentId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!latestValidation || latestValidation.status !== 'PASSED') {
+    throw new AppError(
+      'Deployment must have a passing validation run to create a PR',
+      400,
+      'VALIDATION_REQUIRED'
+    );
+  }
+
   await setStatus(deploymentId, 'CREATING_PULL_REQUEST');
   await logActivity({
     deploymentId,
@@ -496,6 +550,10 @@ export async function createPullRequest(
     const repo = deployment.repository;
     if (!repo) {
       throw new AppError('No repository linked to this deployment', 400, 'NO_REPOSITORY');
+    }
+
+    if (repo.workspaceId !== deployment.workspaceId) {
+      throw new AppError('Repository workspace mismatch', 403, 'FORBIDDEN');
     }
 
     const connection = repo.installation?.connection;

@@ -7,10 +7,13 @@ const KEY_LENGTH = 32;
 const ITERATIONS = 10000;
 
 // Resolve master key
-const MASTER_KEY = process.env.ENCRYPTION_KEY || 'infrapack-master-key-default-secret-salt-123456';
+const MASTER_KEY = process.env.ENCRYPTION_KEY;
+if (!MASTER_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is required');
+}
 
 function getKey(salt: Buffer): Buffer {
-  return crypto.pbkdf2Sync(MASTER_KEY, salt, ITERATIONS, KEY_LENGTH, 'sha256');
+  return crypto.pbkdf2Sync(MASTER_KEY as string, salt, ITERATIONS, KEY_LENGTH, 'sha256');
 }
 
 /**
@@ -40,15 +43,14 @@ export function encrypt(text: string): string {
 
 /**
  * Decrypts a formatted cipher string.
- * Falls back to plain text if not in encrypted format.
+ * Throws an error if not in encrypted format or if decryption fails.
  */
 export function decrypt(cipherText: string): string {
   if (!cipherText) return '';
   
   const parts = cipherText.split(':');
   if (parts.length !== 4) {
-    // Return direct plain-text value if not encrypted
-    return cipherText;
+    throw new Error('Invalid encrypted text format: expected 4 parts');
   }
   
   try {
@@ -67,6 +69,6 @@ export function decrypt(cipherText: string): string {
     return decrypted;
   } catch (err) {
     console.error('[Vault] Decryption failed:', err);
-    return cipherText;
+    throw new Error('Decryption failed');
   }
 }

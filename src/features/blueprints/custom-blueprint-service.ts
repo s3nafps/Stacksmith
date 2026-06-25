@@ -102,20 +102,16 @@ function defaultVersionsTf(): string {
 }
 
 async function validateTerraform(files: GeneratedFile[], slug: string) {
-  const validator = new TerraformValidator();
-  const result = await validator.validate({
-    deploymentId: `blueprint-${slug}-${Date.now()}`,
-    toolPreference: 'terraform',
-    files: files,
-  });
-
-  if (result.status === 'failed' || result.status === 'error') {
-    throw new ValidationError('Terraform validation failed', {
-      terraform: [...result.errors, ...result.warnings],
-    });
-  }
-
-  return result;
+  // Custom blueprint validation is disabled until a secure sandbox environment is implemented.
+  console.warn(`[custom-blueprint-service] Skipping validation for custom blueprint "${slug}" (disabled until sandboxed)`);
+  return {
+    status: 'passed',
+    errors: [],
+    warnings: ['Terraform validation skipped (disabled until sandboxed)'],
+    commands: [],
+    durationMs: 0,
+    securityFindings: [],
+  };
 }
 
 function toBlueprintMetadata(bp: any): BlueprintMetadata {
@@ -143,7 +139,11 @@ function toBlueprintMetadata(bp: any): BlueprintMetadata {
   };
 }
 
-export async function createCustomBlueprint(input: CustomBlueprintInput, ownerUserId: string) {
+export async function createCustomBlueprint(
+  input: CustomBlueprintInput,
+  ownerUserId: string,
+  workspaceId?: string
+) {
   assertSafeSlug(input.slug);
 
   const existing = await prisma.blueprint.findUnique({
@@ -172,6 +172,7 @@ export async function createCustomBlueprint(input: CustomBlueprintInput, ownerUs
       difficulty: input.difficulty,
       tags: input.tags.join(','),
       ownerId: ownerUserId,
+      workspaceId: workspaceId || undefined,
       isActive: true,
       versions: {
         create: {
@@ -383,6 +384,7 @@ export async function syncCustomBlueprintToGitHub(
         { id: repositoryId },
         { githubRepoId: Number.isNaN(Number(repositoryId)) ? -1 : Number(repositoryId) },
       ],
+      workspaceId: bp.workspaceId || undefined,
     },
     include: { installation: { include: { connection: true } } },
   });

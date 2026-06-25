@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getGitHubProvider } from '@/features/github';
 import { prisma } from '@/lib/prisma';
-import { decryptToken } from '@/lib/encryption';
 import { auth } from '@/auth';
 import { errorJson } from '@/lib/api-response';
+
+import { cookies } from 'next/headers';
+import { checkWorkspacePermission } from '@/lib/rbac';
 
 export async function GET() {
   const session = await auth();
@@ -12,19 +13,24 @@ export async function GET() {
   }
 
   try {
-    const connection = await prisma.gitHubConnection.findFirst({
-      where: { userId: session.user.id },
-    });
+    const cookieStore = await cookies();
+    const workspaceId = cookieStore.get('activeWorkspaceId')?.value;
 
-    if (!connection) {
-      return NextResponse.json({ error: 'GitHub connection not found' }, { status: 404 });
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace ID is required' }, { status: 400 });
     }
 
-    // Query repositories from the DB linked to the user's connection installations
+    // Verify user membership in this workspace
+    await checkWorkspacePermission(session.user.id, workspaceId, 'VIEWER');
+
+    // Query repositories from the DB linked to the active workspace
     const dbRepos = await prisma.repository.findMany({
       where: {
+        workspaceId,
         installation: {
-          connectionId: connection.id,
+          connection: {
+            userId: session.user.id,
+          },
         },
       },
       orderBy: { fullName: 'asc' },

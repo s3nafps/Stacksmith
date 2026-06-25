@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { encryptToken } from '@/lib/encryption';
+import { cookies } from 'next/headers';
+import { checkWorkspacePermission } from '@/lib/rbac';
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -22,9 +24,18 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 1. Get or create user's GitHubConnection
+    const cookieStore = await cookies();
+    const workspaceId = cookieStore.get('activeWorkspaceId')?.value;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace ID is required' }, { status: 400 });
+    }
+
+    // Verify user is member of this workspace (ADMIN required to connect installations)
+    await checkWorkspacePermission(session.user.id, workspaceId, 'ADMIN');
+
+    // 1. Get or create user's GitHubConnection for this workspace
     let connection = await prisma.gitHubConnection.findFirst({
-      where: { userId: session.user.id },
+      where: { userId: session.user.id, workspaceId },
     });
 
     if (!connection) {
@@ -32,6 +43,7 @@ export async function GET(request: Request) {
       connection = await prisma.gitHubConnection.create({
         data: {
           userId: session.user.id,
+          workspaceId,
           githubUserId: Math.floor(Math.random() * 100000),
           githubUsername: session.user.name || 'github-user',
           accessToken: mockToken,
@@ -93,12 +105,14 @@ export async function GET(request: Request) {
           language: repo.language,
           htmlUrl: repo.htmlUrl,
           defaultBranch: 'main',
+          workspaceId,
         },
         update: {
           fullName: repo.fullName,
           isPrivate: repo.isPrivate,
           description: repo.description,
           language: repo.language,
+          workspaceId,
         },
       });
     }
