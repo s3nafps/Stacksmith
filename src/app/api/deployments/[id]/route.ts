@@ -18,7 +18,15 @@ export async function GET(
   try {
     await checkDeploymentPermission(session.user.id, id, 'VIEWER');
     const deployment = await getDeployment(id);
-    return NextResponse.json(deployment);
+    const redactedInputs = deployment.inputs.map(input => ({
+      key: input.key,
+      value: input.isSensitive ? '[REDACTED]' : input.value,
+      isSensitive: input.isSensitive,
+    }));
+    return NextResponse.json({
+      ...deployment,
+      inputs: redactedInputs,
+    });
   } catch (error: unknown) {
     return errorJson(error, 'Deployment not found', 404);
   }

@@ -628,7 +628,7 @@ export async function createPullRequest(
         branchName,
         title: pr.title,
         status: 'open',
-        isMock: process.env.MOCK_GITHUB === 'true',
+        isMock: process.env.MOCK_GITHUB_API === 'true',
       },
     });
 

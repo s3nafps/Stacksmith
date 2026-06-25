@@ -10,6 +10,17 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: file:./test.db
+      NEXTAUTH_SECRET: ci-nextauth-secret-at-least-32-characters
+      ENCRYPTION_KEY: ci-encryption-secret-at-least-32-characters
+      TOKEN_ENCRYPTION_KEY: 0000000000000000000000000000000000000000000000000000000000000000
+      MOCK_GITHUB: "true"
+      NEXT_PUBLIC_MOCK_GITHUB: "true"
+      ENABLE_DEMO_AUTH: "true"
+      ENABLE_RUNNER_SIMULATOR: "true"
+      MOCK_GITHUB_API: "true"
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -17,7 +28,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
           cache: 'npm'
 
       - name: Install Dependencies
@@ -25,6 +36,9 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx prisma generate
+
+      - name: Prepare test database
+        run: npx prisma db push --skip-generate
 
       - name: Run Typecheck
         run: npm run typecheck
@@ -34,3 +48,8 @@ jobs:
 
       - name: Run Tests
         run: npm test
+
+      - name: Build application
+        env:
+          ENABLE_DEMO_AUTH: "false"
+        run: npm run build

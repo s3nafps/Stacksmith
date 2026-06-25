@@ -19,7 +19,7 @@ import { useEffect, useState } from 'react';
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { data: session } = useSession();
-  const mockGitHub = process.env.NEXT_PUBLIC_MOCK_GITHUB === 'true';
+  const mockGitHub = process.env.NEXT_PUBLIC_MOCK_GITHUB_API === 'true';
   const [toolPref, setToolPref] = useState('terraform');
   const [saved, setSaved] = useState(false);
   const [mounted, setMounted] = useState(false);

@@ -2,10 +2,17 @@ import { NextAuthConfig } from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import Credentials from 'next-auth/providers/credentials';
 
+if (
+  process.env.NODE_ENV === 'production' &&
+  process.env.ENABLE_DEMO_AUTH === 'true'
+) {
+  throw new Error('Demo authentication cannot be enabled in production');
+}
+
 export const authConfig: NextAuthConfig = {
   session: { strategy: 'jwt' },
   providers: [
-    process.env.MOCK_GITHUB === 'true'
+    process.env.ENABLE_DEMO_AUTH === 'true'
       ? Credentials({
           name: 'Demo Account',
           credentials: {},

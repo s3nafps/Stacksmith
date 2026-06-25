@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
-  const isMock = process.env.NEXT_PUBLIC_MOCK_GITHUB === 'true';
+  const isMock = process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH === 'true';
 
   const handleSignIn = async () => {
     setLoading(true);

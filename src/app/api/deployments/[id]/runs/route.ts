@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { generate } from '@/features/generator/generator-service';
-import { decrypt } from '@/lib/vault';
-import { exec } from 'child_process';
 import { checkDeploymentPermission } from '@/lib/rbac';
-import fs from 'fs/promises';
-import os from 'os';
-import path from 'path';
 
 export async function GET(
   request: Request,
@@ -34,11 +28,12 @@ export async function GET(
 
   try {
     await checkDeploymentPermission(session.user.id, id, 'OPERATOR');
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Forbidden' }, { status: 403 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    return NextResponse.json({ error: err.message || 'Forbidden' }, { status: 403 });
   }
 
-  if (process.env.MOCK_GITHUB !== 'true') {
+  if (process.env.ENABLE_RUNNER_SIMULATOR !== 'true') {
     return NextResponse.json(
       { error: 'Hosted Terraform execution is disabled' },
       { status: 403 }
@@ -53,7 +48,7 @@ export async function GET(
     Connection: 'keep-alive',
   };
 
-  const isMockMode = process.env.MOCK_GITHUB === 'true';
+  const isMockMode = process.env.ENABLE_RUNNER_SIMULATOR === 'true';
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -99,23 +94,23 @@ export async function GET(
             sendEvent(``);
             sendEvent(`\x1b[32mPlan:\x1b[0m 1 to add, 0 to change, 0 to destroy.`);
           } else if (action === 'apply') {
-            sendEvent(`\x1b[32m[Command]\x1b[0m terraform apply -auto-approve -no-color`);
+            sendEvent(`\x1b[32m[Command]\x1b[0m Simulate Apply`);
             await sleep(600);
-            sendEvent(`aws_s3_bucket.example: Creating...`);
+            sendEvent(`aws_s3_bucket.example: Creating... (Simulation)`);
             await sleep(1000);
-            sendEvent(`aws_s3_bucket.example: Still creating... (10s elapsed)`);
+            sendEvent(`aws_s3_bucket.example: Still creating... (Simulation)`);
             await sleep(800);
-            sendEvent(`aws_s3_bucket.example: Creation complete after 15s [id=${deployment.id}-bucket]`);
+            sendEvent(`aws_s3_bucket.example: Creation complete after 15s [id=${deployment.id}-bucket] (Simulation)`);
             sendEvent(``);
-            sendEvent(`\x1b[32mApply complete!\x1b[0m Resources: 1 added, 0 changed, 0 destroyed.`);
+            sendEvent(`\x1b[32mApply simulation complete!\x1b[0m Resources: 1 added, 0 changed, 0 destroyed.`);
             
             // Save mock activity
             await prisma.activityEvent.create({
               data: {
                 deploymentId: deployment.id,
-                type: 'PR_MERGED',
-                title: 'Infrastructure applied (Sandbox)',
-                description: `Successfully applied Terraform plan for ${deployment.blueprint.slug}`,
+                type: 'SANDBOX_APPLY_SIMULATED',
+                title: 'Apply Simulated (Sandbox)',
+                description: `Simulated application of Terraform changes for ${deployment.blueprint.slug}`,
               },
             });
           }
@@ -128,8 +123,9 @@ export async function GET(
           sendEvent(`[FINISHED]`);
           controller.close();
         }
-      } catch (err: any) {
-        sendEvent(`\x1b[31mError in SSE Stream:\x1b[0m ${err.message}`);
+      } catch (err: unknown) {
+        const errorVal = err as Error;
+        sendEvent(`\x1b[31mError in SSE Stream:\x1b[0m ${errorVal.message}`);
         controller.close();
       }
     },
