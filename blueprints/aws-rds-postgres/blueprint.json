@@ -1,0 +1,129 @@
+{
+  "slug": "aws-rds-postgres",
+  "name": "AWS RDS Aurora Serverless v2 PostgreSQL",
+  "description": "Deploys a highly available, security-hardened Amazon Aurora Serverless v2 PostgreSQL database in private subnets, featuring automatic backup policies and AWS Secrets Manager credentials integration.",
+  "provider": "aws",
+  "category": "database",
+  "difficulty": "intermediate",
+  "estimatedDeployTime": "10-15 minutes",
+  "tags": ["rds", "aurora", "postgres", "database", "serverless", "security"],
+  "architectureSummary": "Sets up an Aurora PostgreSQL database cluster using Serverless v2 capacity scaling (ACUs). Places instances within private subnets using a dedicated DB subnet group. Connects to a master credentials secret in Secrets Manager which automatically generates and rotates passwords. Configures target security groups and encrypted storage.",
+  "securityNotes": "The database resides inside private subnets and has no public internet route. Access is locked down strictly via security groups, limiting ingress exclusively to explicitly defined CIDRs or allowed security groups (e.g. ECS Fargate tasks). Master credentials are never stored in plain text — they are generated dynamically and stored in AWS Secrets Manager with KMS encryption.",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changelog": "Initial release with Aurora PostgreSQL cluster, Serverless v2 scaling, Secrets Manager master password, DB subnet group, security group, and storage encryption.",
+      "sourceDir": "versions/1.0.0",
+      "inputs": [
+        {
+          "name": "project_name",
+          "type": "text",
+          "label": "Project Name",
+          "description": "A unique name for the project, used in resource naming and tagging.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "environment",
+          "type": "select",
+          "label": "Environment",
+          "description": "The deployment environment (e.g., dev, staging, production).",
+          "required": true,
+          "default": "dev",
+          "options": ["dev", "staging", "production"]
+        },
+        {
+          "name": "aws_region",
+          "type": "region",
+          "label": "AWS Region",
+          "description": "The AWS region to deploy the database into.",
+          "required": true,
+          "default": "us-east-1",
+          "options": ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-northeast-1"]
+        },
+        {
+          "name": "vpc_id",
+          "type": "text",
+          "label": "VPC ID",
+          "description": "The ID of the VPC where database resources will reside.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "subnet_ids",
+          "type": "text",
+          "label": "Private Subnet IDs",
+          "description": "Comma-separated list of private subnet IDs for the database subnet group (minimum 2 in different AZs).",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "database_name",
+          "type": "text",
+          "label": "Initial Database Name",
+          "description": "The name of the default database to create in the cluster.",
+          "required": true,
+          "default": "appdb"
+        },
+        {
+          "name": "min_capacity",
+          "type": "number",
+          "label": "Min Capacity (ACUs)",
+          "description": "The minimum Aurora Capacity Units (ACUs) to scale down to (e.g., 0.5, 1, 2).",
+          "required": false,
+          "default": 0.5
+        },
+        {
+          "name": "max_capacity",
+          "type": "number",
+          "label": "Max Capacity (ACUs)",
+          "description": "The maximum Aurora Capacity Units (ACUs) to scale up to.",
+          "required": false,
+          "default": 2.0
+        },
+        {
+          "name": "backup_retention_period",
+          "type": "number",
+          "label": "Backup Retention Days",
+          "description": "The number of days to retain automated database backups (1-35).",
+          "required": false,
+          "default": 7
+        },
+        {
+          "name": "allowed_security_group_ids",
+          "type": "text",
+          "label": "Allowed Security Group IDs",
+          "description": "Optional comma-separated list of security group IDs permitted to connect to the database.",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "label": "Additional Tags",
+          "description": "Optional comma-separated key=value pairs for additional resource tags (e.g., team=database,cost-center=data).",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "outputs": [
+        {
+          "name": "cluster_endpoint",
+          "description": "The read-write endpoint connection string of the cluster."
+        },
+        {
+          "name": "cluster_reader_endpoint",
+          "description": "The read-only endpoint connection string of the cluster."
+        },
+        {
+          "name": "database_name",
+          "description": "The default database name."
+        },
+        {
+          "name": "secret_arn",
+          "description": "The ARN of the Secrets Manager secret containing database connection credentials."
+        }
+      ]
+    }
+  ]
+}

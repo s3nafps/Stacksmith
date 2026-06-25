@@ -1,0 +1,36 @@
+{
+  "slug": "aws-eks-karpenter-platform",
+  "name": "AWS EKS Karpenter Platform Baseline",
+  "description": "Creates an EKS cluster baseline prepared for Karpenter autoscaling with bootstrap nodes, interruption handling, and controller IAM policy outputs.",
+  "provider": "aws",
+  "category": "compute",
+  "difficulty": "advanced",
+  "estimatedDeployTime": "30-40 minutes",
+  "tags": ["eks", "kubernetes", "karpenter", "autoscaling", "spot", "platform"],
+  "architectureSummary": "Builds an EKS control plane, a small managed bootstrap node group, core add-ons, a Karpenter controller IAM policy, an SQS interruption queue, EventBridge rules for EC2 interruption signals, and a generated NodePool/EC2NodeClass manifest.",
+  "securityNotes": "Karpenter permissions are scoped to cluster-tagged resources where practical. The blueprint emits manifest YAML rather than applying Kubernetes resources directly, keeping cluster bootstrap reviewable in Git.",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changelog": "Initial Karpenter-ready EKS platform baseline.",
+      "sourceDir": "versions/1.0.0",
+      "inputs": [
+        { "name": "project_name", "type": "text", "label": "Project Name", "description": "Lowercase project name used for resource names.", "required": true, "default": "karpenter-platform" },
+        { "name": "environment", "type": "select", "label": "Environment", "description": "Deployment environment.", "required": true, "default": "dev", "options": ["dev", "staging", "production"] },
+        { "name": "aws_region", "type": "region", "label": "AWS Region", "description": "AWS region for the cluster.", "required": true, "default": "us-east-1", "options": ["us-east-1", "us-east-2", "us-west-2", "eu-west-1", "eu-central-1"] },
+        { "name": "cluster_version", "type": "text", "label": "Kubernetes Version", "description": "EKS Kubernetes version.", "required": true, "default": "1.30" },
+        { "name": "subnet_ids", "type": "text", "label": "Private Subnet IDs", "description": "Comma-separated private subnet IDs for EKS and nodes.", "required": true, "default": "" },
+        { "name": "bootstrap_instance_types", "type": "text", "label": "Bootstrap Instance Types", "description": "Comma-separated EC2 instance types for the small managed bootstrap node group.", "required": true, "default": "t3.medium" },
+        { "name": "karpenter_instance_families", "type": "text", "label": "Karpenter Instance Families", "description": "Comma-separated instance families allowed in the generated NodePool manifest.", "required": false, "default": "m6i,m7i,c6i,c7i" },
+        { "name": "karpenter_capacity_types", "type": "text", "label": "Karpenter Capacity Types", "description": "Comma-separated capacity types for the generated NodePool manifest.", "required": false, "default": "spot,on-demand" },
+        { "name": "tags", "type": "text", "label": "Additional Tags", "description": "Comma-separated key=value tags.", "required": false, "default": "" }
+      ],
+      "outputs": [
+        { "name": "cluster_name", "description": "EKS cluster name." },
+        { "name": "interruption_queue_name", "description": "SQS queue name for Karpenter interruption handling." },
+        { "name": "karpenter_controller_policy_arn", "description": "IAM policy ARN for a Karpenter controller role." },
+        { "name": "karpenter_nodepool_manifest", "description": "Rendered Karpenter EC2NodeClass and NodePool manifest." }
+      ]
+    }
+  ]
+}

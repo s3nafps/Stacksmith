@@ -1,0 +1,217 @@
+{
+  "slug": "aws-s3-static-site",
+  "name": "Secure S3 Static Website",
+  "description": "Production-ready S3 static website hosting with server-side encryption, access logging, versioning, and optional CloudFront CDN distribution. Ideal for hosting SPAs, documentation sites, and marketing pages.",
+  "provider": "aws",
+  "category": "storage",
+  "difficulty": "beginner",
+  "estimatedDeployTime": "5-10 minutes",
+  "tags": ["s3", "static-site", "cloudfront", "hosting", "cdn", "website"],
+  "architectureSummary": "Creates an S3 bucket configured for static website hosting with a separate logging bucket, server-side encryption (AES-256), optional versioning, and a bucket policy for public read access. Version 1.1.0 adds a CloudFront distribution with Origin Access Identity for secure S3 access, optional ACM certificate for custom domains, and automatic HTTP-to-HTTPS redirection.",
+  "securityNotes": "All buckets use server-side encryption (AES-256). Public access is restricted to the website bucket only via explicit bucket policy. The logging bucket blocks all public access. When using CloudFront (v1.1.0), S3 public access is replaced with Origin Access Identity for tighter security. Versioning is enabled by default to protect against accidental deletions.",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changelog": "Initial release with S3 static website hosting, server-side encryption, access logging, versioning, and public read bucket policy.",
+      "sourceDir": "versions/1.0.0",
+      "inputs": [
+        {
+          "name": "project_name",
+          "type": "text",
+          "label": "Project Name",
+          "description": "A unique name for the project, used in resource naming and tagging.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "environment",
+          "type": "select",
+          "label": "Environment",
+          "description": "The deployment environment (e.g., dev, staging, production).",
+          "required": true,
+          "default": "dev",
+          "options": ["dev", "staging", "production"]
+        },
+        {
+          "name": "aws_region",
+          "type": "region",
+          "label": "AWS Region",
+          "description": "The AWS region to deploy resources into.",
+          "required": true,
+          "default": "us-east-1",
+          "options": ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-northeast-1"]
+        },
+        {
+          "name": "domain_name",
+          "type": "domain",
+          "label": "Custom Domain Name",
+          "description": "Optional custom domain name for the static site (e.g., www.example.com). Leave empty to use the S3 website endpoint.",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "enable_versioning",
+          "type": "boolean",
+          "label": "Enable S3 Versioning",
+          "description": "Enable versioning on the S3 bucket to protect against accidental deletions.",
+          "required": false,
+          "default": true
+        },
+        {
+          "name": "index_document",
+          "type": "text",
+          "label": "Index Document",
+          "description": "The default index document for the website.",
+          "required": false,
+          "default": "index.html"
+        },
+        {
+          "name": "error_document",
+          "type": "text",
+          "label": "Error Document",
+          "description": "The custom error document for the website.",
+          "required": false,
+          "default": "error.html"
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "label": "Additional Tags",
+          "description": "Optional comma-separated key=value pairs for additional resource tags (e.g., team=frontend,cost-center=marketing).",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "outputs": [
+        {
+          "name": "website_bucket_name",
+          "description": "The name of the S3 bucket hosting the static website."
+        },
+        {
+          "name": "website_bucket_arn",
+          "description": "The ARN of the S3 website bucket."
+        },
+        {
+          "name": "website_endpoint",
+          "description": "The S3 website endpoint URL."
+        },
+        {
+          "name": "logging_bucket_name",
+          "description": "The name of the S3 access logging bucket."
+        }
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "changelog": "Added CloudFront distribution with Origin Access Identity, HTTP-to-HTTPS redirection, optional ACM certificate for custom domains, and CloudFront access logging. S3 bucket is no longer publicly accessible — all traffic is routed through CloudFront.",
+      "sourceDir": "versions/1.1.0",
+      "inputs": [
+        {
+          "name": "project_name",
+          "type": "text",
+          "label": "Project Name",
+          "description": "A unique name for the project, used in resource naming and tagging.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "environment",
+          "type": "select",
+          "label": "Environment",
+          "description": "The deployment environment (e.g., dev, staging, production).",
+          "required": true,
+          "default": "dev",
+          "options": ["dev", "staging", "production"]
+        },
+        {
+          "name": "aws_region",
+          "type": "region",
+          "label": "AWS Region",
+          "description": "The AWS region to deploy resources into.",
+          "required": true,
+          "default": "us-east-1",
+          "options": ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-northeast-1"]
+        },
+        {
+          "name": "domain_name",
+          "type": "domain",
+          "label": "Custom Domain Name",
+          "description": "Custom domain name for the CloudFront distribution (e.g., www.example.com). When provided, an ACM certificate will be created and validated.",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "enable_versioning",
+          "type": "boolean",
+          "label": "Enable S3 Versioning",
+          "description": "Enable versioning on the S3 bucket to protect against accidental deletions.",
+          "required": false,
+          "default": true
+        },
+        {
+          "name": "index_document",
+          "type": "text",
+          "label": "Index Document",
+          "description": "The default index document for the website.",
+          "required": false,
+          "default": "index.html"
+        },
+        {
+          "name": "error_document",
+          "type": "text",
+          "label": "Error Document",
+          "description": "The custom error document for the website.",
+          "required": false,
+          "default": "error.html"
+        },
+        {
+          "name": "cloudfront_price_class",
+          "type": "select",
+          "label": "CloudFront Price Class",
+          "description": "The CloudFront price class that determines edge location coverage. Lower price classes reduce cost but limit geographic distribution.",
+          "required": false,
+          "default": "PriceClass_100",
+          "options": ["PriceClass_100", "PriceClass_200", "PriceClass_All"]
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "label": "Additional Tags",
+          "description": "Optional comma-separated key=value pairs for additional resource tags (e.g., team=frontend,cost-center=marketing).",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "outputs": [
+        {
+          "name": "website_bucket_name",
+          "description": "The name of the S3 bucket hosting the static website."
+        },
+        {
+          "name": "website_bucket_arn",
+          "description": "The ARN of the S3 website bucket."
+        },
+        {
+          "name": "cloudfront_distribution_id",
+          "description": "The ID of the CloudFront distribution."
+        },
+        {
+          "name": "cloudfront_distribution_domain",
+          "description": "The domain name of the CloudFront distribution."
+        },
+        {
+          "name": "cloudfront_distribution_arn",
+          "description": "The ARN of the CloudFront distribution."
+        },
+        {
+          "name": "website_url",
+          "description": "The primary URL to access the website (CloudFront domain or custom domain)."
+        },
+        {
+          "name": "logging_bucket_name",
+          "description": "The name of the S3 access logging bucket."
+        }
+      ]
+    }
+  ]
+}

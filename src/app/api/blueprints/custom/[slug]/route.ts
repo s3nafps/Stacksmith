@@ -1,0 +1,45 @@
+import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
+import { errorJson } from '@/lib/api-response';
+import {
+  updateCustomBlueprint,
+  deleteCustomBlueprint,
+  type CustomBlueprintInput,
+} from '@/features/blueprints/custom-blueprint-service';
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { slug } = await params;
+    const body = (await request.json()) as CustomBlueprintInput;
+    const blueprint = await updateCustomBlueprint(slug, body, session.user.id);
+    return NextResponse.json(blueprint);
+  } catch (error: unknown) {
+    return errorJson(error, 'Failed to update custom blueprint');
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { slug } = await params;
+    const result = await deleteCustomBlueprint(slug, session.user.id);
+    return NextResponse.json(result);
+  } catch (error: unknown) {
+    return errorJson(error, 'Failed to delete custom blueprint');
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "slug": "aws-ecs-fargate",
+  "name": "AWS ECS Fargate Web Service",
+  "description": "Deploys a containerized web application on AWS ECS Fargate, featuring an Application Load Balancer (ALB), secure listener redirection, autoscaling, and CloudWatch logging.",
+  "provider": "aws",
+  "category": "compute",
+  "difficulty": "intermediate",
+  "estimatedDeployTime": "10-15 minutes",
+  "tags": ["ecs", "fargate", "alb", "container", "docker", "compute"],
+  "architectureSummary": "Sets up an ECS Cluster, ECS Task Definition (Fargate), and ECS Service. Places tasks in private subnets, exposing them through an Application Load Balancer (ALB) in public subnets. Includes target group, security groups, CloudWatch Log Group for container logs, and target-tracking autoscaling (CPU & Memory).",
+  "securityNotes": "Tasks run in private subnets with no direct ingress from the public internet. Access is restricted exclusively via the security group of the ALB. ECS Execution roles are granted minimal privileges required to fetch repository images and write logs. Traffic to ALB can optionally be secured via SSL/TLS certificate.",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changelog": "Initial release with ECS cluster, task definition, Fargate service, ALB, security groups, and autoscaling.",
+      "sourceDir": "versions/1.0.0",
+      "inputs": [
+        {
+          "name": "project_name",
+          "type": "text",
+          "label": "Project Name",
+          "description": "A unique name for the project, used in resource naming and tagging.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "environment",
+          "type": "select",
+          "label": "Environment",
+          "description": "The deployment environment (e.g., dev, staging, production).",
+          "required": true,
+          "default": "dev",
+          "options": ["dev", "staging", "production"]
+        },
+        {
+          "name": "aws_region",
+          "type": "region",
+          "label": "AWS Region",
+          "description": "The AWS region to deploy the ECS service into.",
+          "required": true,
+          "default": "us-east-1",
+          "options": ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-northeast-1"]
+        },
+        {
+          "name": "vpc_id",
+          "type": "text",
+          "label": "VPC ID",
+          "description": "The ID of the VPC where resources will be deployed.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "subnet_ids",
+          "type": "text",
+          "label": "Private Subnet IDs",
+          "description": "Comma-separated list of private subnet IDs for ECS tasks.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "alb_subnet_ids",
+          "type": "text",
+          "label": "Public Subnet IDs (ALB)",
+          "description": "Comma-separated list of public subnet IDs for the ALB.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "container_image",
+          "type": "text",
+          "label": "Container Image",
+          "description": "The Docker image to deploy (e.g., nginx:alpine or public.ecr.aws/...)",
+          "required": true,
+          "default": "nginx:alpine"
+        },
+        {
+          "name": "container_port",
+          "type": "number",
+          "label": "Container Port",
+          "description": "The port the container listens on.",
+          "required": true,
+          "default": 80
+        },
+        {
+          "name": "cpu",
+          "type": "number",
+          "label": "Task CPU Units",
+          "description": "The number of CPU units to allocate (e.g., 256 = 0.25 vCPU, 512, 1024).",
+          "required": false,
+          "default": 256
+        },
+        {
+          "name": "memory",
+          "type": "number",
+          "label": "Task Memory (MB)",
+          "description": "The amount of memory in MB to allocate (e.g., 512, 1024, 2048).",
+          "required": false,
+          "default": 512
+        },
+        {
+          "name": "desired_count",
+          "type": "number",
+          "label": "Desired Instance Count",
+          "description": "The desired number of running container instances.",
+          "required": false,
+          "default": 2
+        },
+        {
+          "name": "domain_name",
+          "type": "domain",
+          "label": "Custom Domain Name",
+          "description": "Optional custom domain name for routing traffic via Route 53 (e.g., app.example.com).",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "label": "Additional Tags",
+          "description": "Optional comma-separated key=value pairs for additional resource tags (e.g., team=platform,cost-center=devops).",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "outputs": [
+        {
+          "name": "alb_dns_name",
+          "description": "The public DNS name of the Application Load Balancer."
+        },
+        {
+          "name": "ecs_cluster_name",
+          "description": "The name of the ECS cluster."
+        },
+        {
+          "name": "ecs_service_name",
+          "description": "The name of the ECS service."
+        },
+        {
+          "name": "ecs_service_security_group_id",
+          "description": "The ID of the security group attached to the ECS Fargate service."
+        }
+      ]
+    }
+  ]
+}

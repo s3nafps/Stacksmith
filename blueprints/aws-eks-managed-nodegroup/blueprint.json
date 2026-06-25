@@ -1,0 +1,39 @@
+{
+  "slug": "aws-eks-managed-nodegroup",
+  "name": "AWS EKS Managed Node Group Platform",
+  "description": "Creates a production-oriented Amazon EKS cluster with encrypted secrets, control plane logging, managed node groups, and core EKS add-ons.",
+  "provider": "aws",
+  "category": "compute",
+  "difficulty": "advanced",
+  "estimatedDeployTime": "25-35 minutes",
+  "tags": ["eks", "kubernetes", "managed-node-group", "addons", "platform"],
+  "architectureSummary": "Builds an EKS control plane in existing private subnets, creates least-privilege IAM roles for the cluster and managed worker nodes, enables control plane logs, encrypts Kubernetes secrets with KMS, and installs the core AWS-managed EKS add-ons.",
+  "securityNotes": "The cluster endpoint can be private-only. Kubernetes secrets are encrypted with a dedicated KMS key, worker nodes use managed policies scoped to EKS operation, and public API access CIDRs are explicit inputs.",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changelog": "Initial EKS managed node group platform blueprint.",
+      "sourceDir": "versions/1.0.0",
+      "inputs": [
+        { "name": "project_name", "type": "text", "label": "Project Name", "description": "Lowercase project name used for resource names.", "required": true, "default": "platform" },
+        { "name": "environment", "type": "select", "label": "Environment", "description": "Deployment environment.", "required": true, "default": "dev", "options": ["dev", "staging", "production"] },
+        { "name": "aws_region", "type": "region", "label": "AWS Region", "description": "AWS region for the cluster.", "required": true, "default": "us-east-1", "options": ["us-east-1", "us-east-2", "us-west-2", "eu-west-1", "eu-central-1"] },
+        { "name": "cluster_version", "type": "text", "label": "Kubernetes Version", "description": "EKS Kubernetes version.", "required": true, "default": "1.30" },
+        { "name": "subnet_ids", "type": "text", "label": "Private Subnet IDs", "description": "Comma-separated private subnet IDs for EKS and worker nodes.", "required": true, "default": "" },
+        { "name": "endpoint_public_access", "type": "boolean", "label": "Public API Endpoint", "description": "Whether the Kubernetes API endpoint is public.", "required": false, "default": false },
+        { "name": "public_access_cidrs", "type": "text", "label": "Public API CIDRs", "description": "Comma-separated CIDRs allowed to reach the public API endpoint.", "required": false, "default": "0.0.0.0/0" },
+        { "name": "node_instance_types", "type": "text", "label": "Node Instance Types", "description": "Comma-separated EC2 instance types for the managed node group.", "required": true, "default": "t3.medium" },
+        { "name": "desired_size", "type": "number", "label": "Desired Node Count", "description": "Desired node group size.", "required": false, "default": 2 },
+        { "name": "min_size", "type": "number", "label": "Minimum Node Count", "description": "Minimum node group size.", "required": false, "default": 1 },
+        { "name": "max_size", "type": "number", "label": "Maximum Node Count", "description": "Maximum node group size.", "required": false, "default": 4 },
+        { "name": "tags", "type": "text", "label": "Additional Tags", "description": "Comma-separated key=value tags.", "required": false, "default": "" }
+      ],
+      "outputs": [
+        { "name": "cluster_name", "description": "EKS cluster name." },
+        { "name": "cluster_endpoint", "description": "EKS API endpoint." },
+        { "name": "node_group_name", "description": "Managed node group name." },
+        { "name": "cluster_security_group_id", "description": "Cluster security group ID." }
+      ]
+    }
+  ]
+}

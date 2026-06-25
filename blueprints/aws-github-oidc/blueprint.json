@@ -1,0 +1,113 @@
+{
+  "slug": "aws-github-oidc",
+  "name": "GitHub Actions OIDC for AWS",
+  "description": "Configures secure, keyless authentication from GitHub Actions to AWS using OpenID Connect (OIDC). Eliminates the need for long-lived AWS access keys by creating an IAM OIDC identity provider and an assumable IAM role with configurable permissions and repository/branch restrictions.",
+  "provider": "aws",
+  "category": "security",
+  "difficulty": "intermediate",
+  "estimatedDeployTime": "2-5 minutes",
+  "tags": ["github", "oidc", "iam", "ci-cd", "security", "github-actions"],
+  "architectureSummary": "Creates an IAM OIDC identity provider for GitHub Actions (token.actions.githubusercontent.com), an IAM role with a trust policy scoped to a specific GitHub organization, repository, and branch, and attaches configurable managed IAM policies. The role can be assumed by GitHub Actions workflows using the aws-actions/configure-aws-credentials action.",
+  "securityNotes": "Uses OIDC federation instead of long-lived access keys, following AWS security best practices. The trust policy restricts role assumption to a specific GitHub organization, repository, and optionally a branch. Session duration is configurable with a sensible default of 1 hour. Only managed policies are attached — no inline policies with overly broad permissions.",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changelog": "Initial release with IAM OIDC provider, IAM role with GitHub Actions trust policy, and configurable managed policy attachments.",
+      "sourceDir": "versions/1.0.0",
+      "inputs": [
+        {
+          "name": "project_name",
+          "type": "text",
+          "label": "Project Name",
+          "description": "A unique name for the project, used in resource naming and tagging.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "environment",
+          "type": "select",
+          "label": "Environment",
+          "description": "The deployment environment (e.g., dev, staging, production).",
+          "required": true,
+          "default": "dev",
+          "options": ["dev", "staging", "production"]
+        },
+        {
+          "name": "aws_region",
+          "type": "region",
+          "label": "AWS Region",
+          "description": "The AWS region to deploy IAM resources into. Note: IAM is global but the provider still requires a region.",
+          "required": true,
+          "default": "us-east-1",
+          "options": ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-northeast-1"]
+        },
+        {
+          "name": "github_org",
+          "type": "text",
+          "label": "GitHub Organization",
+          "description": "The GitHub organization or user account name (e.g., my-company).",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "github_repo",
+          "type": "text",
+          "label": "GitHub Repository",
+          "description": "The GitHub repository name (e.g., my-app). Used to scope the IAM trust policy.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "github_branch",
+          "type": "text",
+          "label": "GitHub Branch",
+          "description": "The Git branch to restrict role assumption to. Use '*' to allow any branch.",
+          "required": false,
+          "default": "main"
+        },
+        {
+          "name": "role_name",
+          "type": "text",
+          "label": "IAM Role Name",
+          "description": "Custom name for the IAM role. If empty, a name will be generated from the project name.",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "policy_arns",
+          "type": "text",
+          "label": "IAM Policy ARNs",
+          "description": "Comma-separated list of IAM managed policy ARNs to attach to the role.",
+          "required": false,
+          "default": "arn:aws:iam::aws:policy/ReadOnlyAccess"
+        },
+        {
+          "name": "max_session_duration",
+          "type": "number",
+          "label": "Max Session Duration",
+          "description": "Maximum session duration in seconds for the IAM role (900-43200).",
+          "required": false,
+          "default": 3600
+        }
+      ],
+      "outputs": [
+        {
+          "name": "oidc_provider_arn",
+          "description": "The ARN of the IAM OIDC identity provider."
+        },
+        {
+          "name": "role_arn",
+          "description": "The ARN of the IAM role for GitHub Actions."
+        },
+        {
+          "name": "role_name",
+          "description": "The name of the IAM role."
+        },
+        {
+          "name": "github_actions_config_snippet",
+          "description": "A sample GitHub Actions workflow snippet for using the role."
+        }
+      ]
+    }
+  ]
+}

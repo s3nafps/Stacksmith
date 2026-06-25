@@ -1,0 +1,110 @@
+{
+  "slug": "aws-lambda-api",
+  "name": "AWS Serverless Lambda HTTP API",
+  "description": "Deploys a serverless REST API using AWS Lambda and API Gateway HTTP API, with configurable IAM execution roles, custom environment variables, and CloudWatch logs.",
+  "provider": "aws",
+  "category": "compute",
+  "difficulty": "beginner",
+  "estimatedDeployTime": "2-5 minutes",
+  "tags": ["lambda", "api-gateway", "serverless", "api", "node", "python"],
+  "architectureSummary": "Sets up an API Gateway HTTP API (v2) routing all requests (`ANY /{proxy+}`) to a backend Lambda function. Creates a CloudWatch Log Group for Lambda logs and configures basic IAM roles with execution permissions. Includes option to pass environment variables.",
+  "securityNotes": "The Lambda function is executed using an IAM role scoped to the bare minimum permissions (writing logs to CloudWatch). The HTTP API has CORS enabled by default to allow cross-origin requests. Environment variables can optionally contain configuration secrets.",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changelog": "Initial release with API Gateway HTTP API, Lambda function, basic IAM role, and environment variables mapping.",
+      "sourceDir": "versions/1.0.0",
+      "inputs": [
+        {
+          "name": "project_name",
+          "type": "text",
+          "label": "Project Name",
+          "description": "A unique name for the project, used in resource naming and tagging.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "environment",
+          "type": "select",
+          "label": "Environment",
+          "description": "The deployment environment (e.g., dev, staging, production).",
+          "required": true,
+          "default": "dev",
+          "options": ["dev", "staging", "production"]
+        },
+        {
+          "name": "aws_region",
+          "type": "region",
+          "label": "AWS Region",
+          "description": "The AWS region to deploy the API into.",
+          "required": true,
+          "default": "us-east-1",
+          "options": ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-northeast-1"]
+        },
+        {
+          "name": "runtime",
+          "type": "select",
+          "label": "Runtime Environment",
+          "description": "The Lambda execution runtime environment.",
+          "required": true,
+          "default": "nodejs20.x",
+          "options": ["nodejs20.x", "python3.11", "go1.x"]
+        },
+        {
+          "name": "handler",
+          "type": "text",
+          "label": "Lambda Handler",
+          "description": "The entry point in your code (e.g. index.handler or main).",
+          "required": true,
+          "default": "index.handler"
+        },
+        {
+          "name": "memory_size",
+          "type": "number",
+          "label": "Memory Size (MB)",
+          "description": "The memory allocated to the Lambda function (128-10240).",
+          "required": false,
+          "default": 128
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "label": "Timeout (Seconds)",
+          "description": "The maximum execution time in seconds (1-900).",
+          "required": false,
+          "default": 10
+        },
+        {
+          "name": "environment_variables",
+          "type": "text",
+          "label": "Environment Variables",
+          "description": "Optional comma-separated KEY=VALUE pairs to inject into the Lambda function (e.g. API_KEY=abc,STAGE=prod).",
+          "required": false,
+          "default": ""
+        },
+        {
+          "name": "tags",
+          "type": "text",
+          "label": "Additional Tags",
+          "description": "Optional comma-separated key=value pairs for additional resource tags (e.g., team=serverless,cost-center=api).",
+          "required": false,
+          "default": ""
+        }
+      ],
+      "outputs": [
+        {
+          "name": "api_endpoint",
+          "description": "The base HTTP API endpoint URL."
+        },
+        {
+          "name": "lambda_function_name",
+          "description": "The name of the Lambda function created."
+        },
+        {
+          "name": "lambda_role_arn",
+          "description": "The IAM execution role ARN."
+        }
+      ]
+    }
+  ]
+}

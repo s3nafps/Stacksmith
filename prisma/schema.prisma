@@ -1,0 +1,362 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum DeploymentStatus {
+  DRAFT
+  GENERATING
+  VALIDATING
+  FAILED_VALIDATION
+  READY
+  CREATING_PULL_REQUEST
+  PULL_REQUEST_OPEN
+  MERGED
+  CLOSED
+  UPDATE_AVAILABLE
+  FAILED
+}
+
+enum ValidationStatus {
+  PENDING
+  RUNNING
+  PASSED
+  FAILED
+  SKIPPED
+  ERROR
+}
+
+enum ActivityType {
+  DEPLOYMENT_CREATED
+  DEPLOYMENT_CONFIGURED
+  GENERATION_STARTED
+  GENERATION_COMPLETED
+  GENERATION_FAILED
+  VALIDATION_STARTED
+  VALIDATION_PASSED
+  VALIDATION_FAILED
+  PR_CREATION_STARTED
+  PR_CREATED
+  PR_MERGED
+  PR_CLOSED
+  UPGRADE_AVAILABLE
+  UPGRADE_STARTED
+  UPGRADE_COMPLETED
+  CONFLICT_DETECTED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  githubConnections GitHubConnection[]
+  deployments      Deployment[]
+  customBlueprints Blueprint[]
+  workspaceMembers WorkspaceMember[]
+
+  @@map("users")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+model Workspace {
+  id                 String            @id @default(cuid())
+  name               String
+  slug               String            @unique
+  billingPlan        String            @default("free") // "free" or "pro"
+  subscriptionStatus String            @default("active")
+  paddleCustomerId   String?
+  paddleSubscriptionId String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  members            WorkspaceMember[]
+  blueprints         Blueprint[]
+  deployments        Deployment[]
+  githubConnections  GitHubConnection[]
+  repositories       Repository[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(VIEWER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model GitHubConnection {
+  id                String   @id @default(cuid())
+  userId            String
+  githubUserId      Int
+  githubUsername     String
+  accessToken       String   // Encrypted
+  refreshToken      String?  // Encrypted
+  tokenExpiresAt    DateTime?
+  scopes            String   // Comma-separated scopes
+  workspaceId       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace?          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installations GitHubInstallation[]
+
+  @@unique([userId, githubUserId])
+  @@map("github_connections")
+}
+
+model GitHubInstallation {
+  id               String   @id @default(cuid())
+  connectionId     String
+  installationId   Int      @unique
+  appSlug          String?
+  targetType       String   // "User" or "Organization"
+  targetLogin      String
+  permissions      Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  connection   GitHubConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  repositories Repository[]
+
+  @@map("github_installations")
+}
+
+model Repository {
+  id               String   @id @default(cuid())
+  installationId   String
+  githubRepoId     Int      @unique
+  fullName         String   // "owner/repo"
+  defaultBranch    String   @default("main")
+  isPrivate        Boolean  @default(false)
+  description      String?
+  language         String?
+  htmlUrl          String
+  workspaceId       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  installation GitHubInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  workspace     Workspace?          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deployments  Deployment[]
+
+  @@map("repositories")
+}
+
+model Blueprint {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  provider    String   @default("aws")
+  category    String
+  difficulty  String   @default("intermediate")
+  tags        String   // Comma-separated tags
+  iconUrl     String?
+  isActive    Boolean  @default(true)
+  ownerId     String?
+  workspaceId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User?    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions    BlueprintVersion[]
+  deployments Deployment[]
+
+  @@map("blueprints")
+}
+
+model BlueprintVersion {
+  id                    String   @id @default(cuid())
+  blueprintId           String
+  version               String
+  changelog             String?
+  architectureSummary   String?
+  securityNotes         String?
+  estimatedDeployTime   String?
+  documentation         String?
+  sourceDir             String
+  inputs                Json     // Blueprint input definitions
+  outputs               Json     // Blueprint output definitions
+  files                 Json?    // Optional: stores file contents for custom blueprints
+  validationStatus      String   @default("validated")
+  isLatest              Boolean  @default(false)
+  publishedAt           DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  blueprint   Blueprint    @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+  deployments Deployment[]
+
+  @@unique([blueprintId, version])
+  @@map("blueprint_versions")
+}
+
+model Deployment {
+  id                String           @id @default(cuid())
+  userId            String
+  blueprintId       String
+  blueprintVersionId String
+  repositoryId      String?
+  workspaceId       String
+  status            DeploymentStatus @default(DRAFT)
+  targetDir         String           @default("infrastructure")
+  environmentName   String           @default("production")
+  toolPreference    String           @default("terraform") // "terraform" or "opentofu"
+  generatorVersion  String?
+  managedFiles      Json?            // Array of managed file paths
+  configSnapshot    Json?            // Non-sensitive config at generation time
+  errorMessage      String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blueprint        Blueprint         @relation(fields: [blueprintId], references: [id])
+  blueprintVersion BlueprintVersion  @relation(fields: [blueprintVersionId], references: [id])
+  repository       Repository?       @relation(fields: [repositoryId], references: [id])
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inputs           DeploymentInput[]
+  validationRuns   ValidationRun[]
+  pullRequests     PullRequest[]
+  activityEvents   ActivityEvent[]
+
+  @@map("deployments")
+}
+
+model DeploymentInput {
+  id           String   @id @default(cuid())
+  deploymentId String
+  key          String
+  value        String
+  isSensitive  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  deployment Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@unique([deploymentId, key])
+  @@map("deployment_inputs")
+}
+
+model ValidationRun {
+  id            String           @id @default(cuid())
+  deploymentId  String
+  status        ValidationStatus @default(PENDING)
+  overallResult String?
+  commandResults Json?           // Array of command results
+  warnings      Json?            // Array of warnings
+  errors        Json?            // Array of errors
+  securityFindings Json?         // Array of security findings
+  durationMs    Int?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  deployment Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@map("validation_runs")
+}
+
+model PullRequest {
+  id           String   @id @default(cuid())
+  deploymentId String
+  prNumber     Int?
+  prUrl        String?
+  branchName   String
+  title        String
+  description  String?
+  status       String   @default("open") // open, merged, closed
+  isMock       Boolean  @default(false)
+  headSha      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  deployment Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@map("pull_requests")
+}
+
+model ActivityEvent {
+  id           String       @id @default(cuid())
+  deploymentId String?
+  userId       String?
+  type         ActivityType
+  title        String
+  description  String?
+  metadata     Json?
+  createdAt    DateTime     @default(now())
+
+  deployment Deployment? @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  @@index([deploymentId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("activity_events")
+}

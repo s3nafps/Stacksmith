@@ -1,0 +1,129 @@
+{
+  "slug": "aws-vpc-network",
+  "name": "AWS VPC Network",
+  "description": "Production-ready AWS VPC with public and private subnets across multiple Availability Zones, Internet Gateway, NAT Gateway, route tables, network ACLs, and optional VPC Flow Logs. Provides a secure foundation for deploying workloads in AWS.",
+  "provider": "aws",
+  "category": "networking",
+  "difficulty": "intermediate",
+  "estimatedDeployTime": "5-10 minutes",
+  "tags": ["vpc", "networking", "subnets", "nat-gateway", "flow-logs", "security"],
+  "architectureSummary": "Creates a VPC with configurable CIDR block, 2 public subnets and 2 private subnets spread across Availability Zones for high availability. Public subnets have an Internet Gateway with direct internet access. Private subnets route internet traffic through a NAT Gateway (optionally single or per-AZ). VPC Flow Logs capture network traffic metadata to CloudWatch for monitoring and auditing.",
+  "securityNotes": "Private subnets have no direct inbound internet access. Network ACLs provide subnet-level firewall rules. VPC Flow Logs (when enabled) capture all accepted and rejected traffic for security auditing. NAT Gateway enables outbound-only internet access for private subnet resources. Default security group blocks all inbound traffic.",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changelog": "Initial release with VPC, public/private subnets, Internet Gateway, NAT Gateway, route tables, network ACLs, and VPC Flow Logs.",
+      "sourceDir": "versions/1.0.0",
+      "inputs": [
+        {
+          "name": "project_name",
+          "type": "text",
+          "label": "Project Name",
+          "description": "A unique name for the project, used in resource naming and tagging.",
+          "required": true,
+          "default": ""
+        },
+        {
+          "name": "environment",
+          "type": "select",
+          "label": "Environment",
+          "description": "The deployment environment (e.g., dev, staging, production).",
+          "required": true,
+          "default": "dev",
+          "options": ["dev", "staging", "production"]
+        },
+        {
+          "name": "aws_region",
+          "type": "region",
+          "label": "AWS Region",
+          "description": "The AWS region to deploy the VPC into.",
+          "required": true,
+          "default": "us-east-1",
+          "options": ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "eu-west-1", "eu-west-2", "eu-central-1", "ap-southeast-1", "ap-northeast-1"]
+        },
+        {
+          "name": "vpc_cidr",
+          "type": "cidr",
+          "label": "VPC CIDR Block",
+          "description": "The CIDR block for the VPC (e.g., 10.0.0.0/16).",
+          "required": true,
+          "default": "10.0.0.0/16"
+        },
+        {
+          "name": "public_subnet_cidrs",
+          "type": "text",
+          "label": "Public Subnet CIDRs",
+          "description": "Comma-separated CIDR blocks for public subnets (one per AZ).",
+          "required": true,
+          "default": "10.0.1.0/24,10.0.2.0/24"
+        },
+        {
+          "name": "private_subnet_cidrs",
+          "type": "text",
+          "label": "Private Subnet CIDRs",
+          "description": "Comma-separated CIDR blocks for private subnets (one per AZ).",
+          "required": true,
+          "default": "10.0.10.0/24,10.0.20.0/24"
+        },
+        {
+          "name": "enable_nat_gateway",
+          "type": "boolean",
+          "label": "Enable NAT Gateway",
+          "description": "Enable a NAT Gateway for private subnet internet access.",
+          "required": false,
+          "default": true
+        },
+        {
+          "name": "single_nat_gateway",
+          "type": "boolean",
+          "label": "Single NAT Gateway",
+          "description": "Use a single NAT Gateway instead of one per AZ (reduces cost, lower availability).",
+          "required": false,
+          "default": true
+        },
+        {
+          "name": "enable_flow_logs",
+          "type": "boolean",
+          "label": "Enable VPC Flow Logs",
+          "description": "Enable VPC Flow Logs to capture network traffic metadata to CloudWatch.",
+          "required": false,
+          "default": true
+        }
+      ],
+      "outputs": [
+        {
+          "name": "vpc_id",
+          "description": "The ID of the VPC."
+        },
+        {
+          "name": "vpc_cidr_block",
+          "description": "The CIDR block of the VPC."
+        },
+        {
+          "name": "public_subnet_ids",
+          "description": "List of public subnet IDs."
+        },
+        {
+          "name": "private_subnet_ids",
+          "description": "List of private subnet IDs."
+        },
+        {
+          "name": "internet_gateway_id",
+          "description": "The ID of the Internet Gateway."
+        },
+        {
+          "name": "nat_gateway_ids",
+          "description": "List of NAT Gateway IDs (if enabled)."
+        },
+        {
+          "name": "public_route_table_id",
+          "description": "The ID of the public route table."
+        },
+        {
+          "name": "private_route_table_ids",
+          "description": "List of private route table IDs."
+        }
+      ]
+    }
+  ]
+}

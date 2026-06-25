@@ -1,0 +1,35 @@
+{
+  "slug": "aws-eks-fargate-profiles",
+  "name": "AWS EKS Fargate Profiles",
+  "description": "Creates an EKS cluster that runs selected Kubernetes namespaces on AWS Fargate without managing worker nodes.",
+  "provider": "aws",
+  "category": "compute",
+  "difficulty": "advanced",
+  "estimatedDeployTime": "20-30 minutes",
+  "tags": ["eks", "kubernetes", "fargate", "serverless", "platform"],
+  "architectureSummary": "Builds an EKS control plane, core AWS-managed add-ons, and Fargate profiles for platform and workload namespaces. This pattern is useful for teams that want Kubernetes APIs without EC2 node lifecycle management.",
+  "securityNotes": "Pods run in private subnets on Fargate. The Fargate pod execution role only receives the AWS-managed policy required for image pulls and runtime operation. The API endpoint can remain private-only.",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "changelog": "Initial EKS Fargate profile blueprint.",
+      "sourceDir": "versions/1.0.0",
+      "inputs": [
+        { "name": "project_name", "type": "text", "label": "Project Name", "description": "Lowercase project name used for resource names.", "required": true, "default": "serverless-platform" },
+        { "name": "environment", "type": "select", "label": "Environment", "description": "Deployment environment.", "required": true, "default": "dev", "options": ["dev", "staging", "production"] },
+        { "name": "aws_region", "type": "region", "label": "AWS Region", "description": "AWS region for the cluster.", "required": true, "default": "us-east-1", "options": ["us-east-1", "us-east-2", "us-west-2", "eu-west-1", "eu-central-1"] },
+        { "name": "cluster_version", "type": "text", "label": "Kubernetes Version", "description": "EKS Kubernetes version.", "required": true, "default": "1.30" },
+        { "name": "subnet_ids", "type": "text", "label": "Private Subnet IDs", "description": "Comma-separated private subnet IDs for Fargate pods.", "required": true, "default": "" },
+        { "name": "endpoint_public_access", "type": "boolean", "label": "Public API Endpoint", "description": "Whether the Kubernetes API endpoint is public.", "required": false, "default": false },
+        { "name": "workload_namespaces", "type": "text", "label": "Workload Namespaces", "description": "Comma-separated Kubernetes namespaces that should run on Fargate.", "required": true, "default": "apps,jobs" },
+        { "name": "tags", "type": "text", "label": "Additional Tags", "description": "Comma-separated key=value tags.", "required": false, "default": "" }
+      ],
+      "outputs": [
+        { "name": "cluster_name", "description": "EKS cluster name." },
+        { "name": "cluster_endpoint", "description": "EKS API endpoint." },
+        { "name": "fargate_profile_names", "description": "Fargate profile names." },
+        { "name": "pod_execution_role_arn", "description": "IAM role used by Fargate pods." }
+      ]
+    }
+  ]
+}
